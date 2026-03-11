@@ -7,35 +7,101 @@ const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+
+const io = new Server(server, {
+  cors: {
+    origin: '*'
+  }
+});
 
 let messages = [];
+let onlineUsers = 0;
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  socket.on('join', ({ username, role }) => {
-    socket.username = username;
-    socket.role = role || 'member';
-    socket.emit('chat history', messages);
-  });
+	  socket.on('join', ({ username, role }) => {
+		  socket.username = username || "Guest";
+		  socket.role = role || "member";
+		  
+			onlineUsers++;
 
-  socket.on('chat message', (msgContent) => {
-    const msg = {
-      username: socket.username,
-      role: socket.role,
-      content: msgContent,
-      timestamp: new Date()
-    };
-    messages.push(msg);
-    io.emit('chat message', msg);
-  });
+		  // Send history first
+		  socket.emit('chat history', messages);
 
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
+		  const joinMsg = {
+			username: "System",
+			role: "system",
+			content: socket.username + " joined the community",
+			timestamp: new Date()
+		  };
+
+		  messages.push(joinMsg);
+			  if (messages.length > 200) {
+			  messages.shift();
+			  }
+
+		  // Broadcast to everyone
+		  io.emit('chat message', joinMsg);
+
+	});
+
+
+
+	  socket.on('chat message', (content) => {
+
+		if (!socket.username) return;
+
+		const msg = {
+		  username: socket.username,
+		  role: socket.role,
+		  content: content,
+		  timestamp: new Date()
+		};
+
+		messages.push(msg);
+		if (messages.length > 200) {
+		  messages.shift();
+		}
+
+		io.emit('chat message', msg);
+
+	  });
+
+
+	  socket.on('disconnect', () => {
+
+	  if (socket.username) {
+
+		const leaveMsg = {
+		  username: "System",
+		  role: "system",
+		  content: socket.username + " left the community",
+		  timestamp: new Date()
+		};
+
+		messages.push(leaveMsg);
+			if (messages.length > 200) {
+				 messages.shift();
+			}
+
+		io.emit('chat message', leaveMsg);
+
+	  }
+
+	});
+	  
+
 });
 
-// IMPORTANT: use dynamic port for deployment
+
+app.get('/', (req, res) => {
+  res.send("Smart2z Community Chat Server Running");
+});
+
+
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Chat server running on port ${PORT}`));
+
+server.listen(PORT, () => {
+  console.log("Chat server running on port " + PORT);
+});
