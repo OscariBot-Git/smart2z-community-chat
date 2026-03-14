@@ -33,7 +33,7 @@ io.on('connection', (socket) => {
 			username: "System",
 			role: "system",
 			content: socket.username + " joined the community",
-			timestamp: new Date()
+			timestamp: new Date(),
 			online: onlineUsers
 		  };
 
@@ -80,7 +80,7 @@ io.on('connection', (socket) => {
 		  username: "System",
 		  role: "system",
 		  content: socket.username + " left the community",
-		  timestamp: new Date()
+		  timestamp: new Date(),
 		  online: onlineUsers
 		};
 
