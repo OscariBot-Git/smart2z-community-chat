@@ -14,11 +14,14 @@ const io = new Server(server, {
   }
 });
 
+
 let messages = [];
+const MAX_MESSAGE_LENGTH = 300;
 let onlineUsers = 0;
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  //console.log('User connected:', socket.id);
+  
 
 	  socket.on('join', ({ username, role }) => {
 		  socket.username = username || "Guest";
@@ -38,7 +41,7 @@ io.on('connection', (socket) => {
 		  };
 
 		  messages.push(joinMsg);
-			  if (messages.length > 200) {
+			  if (messages.length > 50) {
 			  messages.shift();
 			  }
 
@@ -49,28 +52,50 @@ io.on('connection', (socket) => {
 
 
 
-	  socket.on('chat message', (content) => {
+	socket.on('chat message', (content) => {
 
-		if (!socket.username) return;
+		  if (!socket.username) return;
 
-		const msg = {
-		  username: socket.username,
-		  role: socket.role,
-		  content: content,
-		  timestamp: new Date()
-		};
+		  if (!content || content.length > MAX_MESSAGE_LENGTH) {
+			return;
+		  }
 
-		messages.push(msg);
-		if (messages.length > 200) {
-		  messages.shift();
-		}
+		  const msg = {
+			username: socket.username,
+			role: socket.role,
+			content: content,
+			timestamp: new Date()
+		  };
 
-		io.emit('chat message', msg);
+		  messages.push(msg);
 
-	  });
+		  if (messages.length > 50) {
+			messages.shift();
+		  }
 
+		  io.emit('chat message', msg);
 
-	  socket.on('disconnect', () => {
+		});
+		
+		
+		socket.on("typing", () => {
+
+		  socket.broadcast.emit("typing", {
+			username: socket.username
+		  });
+
+		});
+
+		socket.on("stop typing", () => {
+
+		  socket.broadcast.emit("stop typing", {
+			username: socket.username
+		  });
+
+		});
+				
+
+	socket.on('disconnect', () => {
 		  
 	  onlineUsers = Math.max(onlineUsers - 1, 0);  
 
