@@ -34,6 +34,7 @@ io.on('connection', (socket) => {
 			role: "system",
 			content: socket.username + " joined the community",
 			timestamp: new Date()
+			online: onlineUsers
 		  };
 
 		  messages.push(joinMsg);
@@ -70,6 +71,8 @@ io.on('connection', (socket) => {
 
 
 	  socket.on('disconnect', () => {
+		  
+	  onlineUsers = Math.max(onlineUsers - 1, 0);  
 
 	  if (socket.username) {
 
@@ -78,6 +81,7 @@ io.on('connection', (socket) => {
 		  role: "system",
 		  content: socket.username + " left the community",
 		  timestamp: new Date()
+		  online: onlineUsers
 		};
 
 		messages.push(leaveMsg);
