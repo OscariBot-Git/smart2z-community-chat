@@ -33,7 +33,7 @@ io.on('connection', (socket) => {
 		  socket.emit('chat history', messages);
 
 		  const joinMsg = {
-			username: "System",
+			username: username,
 			role: "system",
 			content: socket.username + " joined the community",
 			timestamp: new Date(),
@@ -75,24 +75,22 @@ io.on('connection', (socket) => {
 
 		  io.emit('chat message', msg);
 
-		});
+	});
 		
 		
-		socket.on("typing", () => {
-
+	socket.on("typing", () => {
 		  socket.broadcast.emit("typing", {
 			username: socket.username
 		  });
 
-		});
+	});
 
-		socket.on("stop typing", () => {
-
+	socket.on("stop typing", () => {
 		  socket.broadcast.emit("stop typing", {
 			username: socket.username
 		  });
 
-		});
+	});
 				
 
 	socket.on('disconnect', () => {
