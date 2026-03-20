@@ -43,27 +43,47 @@ io.on('connection', (socket) => {
     io.emit('chat message', joinMsg);
 
   });
+  
+  
+  
+  
+// SEND MESSAGE
+socket.on('chat message', (data) => {
 
-  // SEND MESSAGE
-  socket.on('chat message', (content) => {
+  if (!socket.username) return;
 
-    if (!socket.username || !content.trim()) return;
+  let content;
+  let replyTo = null;
 
-    const msg = {
-      id: Date.now() + "_" + Math.random(),
-      username: socket.username,
-      role: socket.role,
-      content: content,
-      timestamp: new Date(),
-      reactions: {}
-    };
+  // ✅ Handle both string and object formats
+  if (typeof data === "string") {
+    content = data.trim();
+  } else {
+    content = (data.content || "").trim();
+    replyTo = data.replyTo || null;
+  }
 
-    messages.push(msg);
-    if (messages.length > 200) messages.shift();
+  if (!content) return;
 
-    io.emit('chat message', msg);
+  const msg = {
+    id: Date.now() + "_" + Math.random(),
+    username: socket.username,
+    role: socket.role,
+    content: content,
+    replyTo: replyTo, // ✅ NEW
+    timestamp: new Date(),
+    reactions: {}
+  };
 
-  });
+  messages.push(msg);
+  if (messages.length > 200) messages.shift();
+
+  io.emit('chat message', msg);
+
+});
+  
+  
+  
 
   // DELETE MESSAGE
   socket.on('delete message', (msgId) => {
