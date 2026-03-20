@@ -9,123 +9,164 @@ app.use(cors());
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: {
-    origin: '*'
-  }
+  cors: { origin: '*' }
 });
 
-
 let messages = [];
-const MAX_MESSAGE_LENGTH = 300;
 let onlineUsers = 0;
 
 io.on('connection', (socket) => {
-  //console.log('User connected:', socket.id);
-  
 
-	  socket.on('join', ({ username, role }) => {
-		  socket.username = username || "Guest";
-		  socket.role = role || "member";
-		  
-			onlineUsers++;
+  // JOIN
+  socket.on('join', ({ username, role }) => {
 
-		  // Send history first
-		  socket.emit('chat history', messages);
+    socket.username = username || "Guest";
+    socket.role = role || "member";
 
-		  const joinMsg = {
-			username: username,
-			role: "system",
-			content: socket.username + " joined the community",
-			timestamp: new Date(),
-			online: onlineUsers
-		  };
+    onlineUsers++;
 
-		  messages.push(joinMsg);
-			  if (messages.length > 50) {
-			  messages.shift();
-			  }
+    socket.emit('chat history', messages);
 
-		  // Broadcast to everyone
-		  io.emit('chat message', joinMsg);
+    const joinMsg = {
+      id: Date.now() + "_" + Math.random(),
+      username: "System",
+      role: "system",
+      content: socket.username + " joined the community",
+      timestamp: new Date(),
+      online: onlineUsers,
+      reactions: {}
+    };
 
-	});
+    messages.push(joinMsg);
+    if (messages.length > 200) messages.shift();
 
+    io.emit('chat message', joinMsg);
 
+  });
 
-	socket.on('chat message', (content) => {
+  // SEND MESSAGE
+  socket.on('chat message', (content) => {
 
-		  if (!socket.username) return;
+    if (!socket.username || !content.trim()) return;
 
-		  if (!content || content.length > MAX_MESSAGE_LENGTH) {
-			return;
-		  }
+    const msg = {
+      id: Date.now() + "_" + Math.random(),
+      username: socket.username,
+      role: socket.role,
+      content: content,
+      timestamp: new Date(),
+      reactions: {}
+    };
 
-		  const msg = {
-			username: socket.username,
-			role: socket.role,
-			content: content,
-			timestamp: new Date()
-		  };
+    messages.push(msg);
+    if (messages.length > 200) messages.shift();
 
-		  messages.push(msg);
+    io.emit('chat message', msg);
 
-		  if (messages.length > 50) {
-			messages.shift();
-		  }
+  });
 
-		  io.emit('chat message', msg);
+  // DELETE MESSAGE
+  socket.on('delete message', (msgId) => {
 
-	});
-		
-		
-	socket.on("typing", () => {
-		  socket.broadcast.emit("typing", {
-			username: socket.username
-		  });
+    const index = messages.findIndex(m => m.id === msgId);
 
-	});
+    if (index === -1) return;
 
-	socket.on("stop typing", () => {
-		  socket.broadcast.emit("stop typing", {
-			username: socket.username
-		  });
+    // Only owner or admin can delete
+    if (
+      messages[index].username === socket.username ||
+      socket.role === "Admin"
+    ) {
+      messages.splice(index, 1);
+      io.emit('message deleted', msgId);
+    }
 
-	});
-				
+  });
 
-	socket.on('disconnect', () => {
-		  
-	  onlineUsers = Math.max(onlineUsers - 1, 0);  
+  // EDIT MESSAGE
+  socket.on('edit message', ({ msgId, newContent }) => {
 
-	  if (socket.username) {
+    const msg = messages.find(m => m.id === msgId);
 
-		const leaveMsg = {
-		  username: "System",
-		  role: "system",
-		  content: socket.username + " left the community",
-		  timestamp: new Date(),
-		  online: onlineUsers
-		};
+    if (!msg) return;
 
-		messages.push(leaveMsg);
-			if (messages.length > 200) {
-				 messages.shift();
-			}
+    if (msg.username === socket.username) {
 
-		io.emit('chat message', leaveMsg);
+      msg.content = newContent;
 
-	  }
+      io.emit('message edited', {
+        msgId,
+        newContent
+      });
 
-	});
-	  
+    }
+
+  });
+
+  // REACT TO MESSAGE
+  socket.on('react', ({ msgId, reaction }) => {
+
+    const msg = messages.find(m => m.id === msgId);
+
+    if (!msg) return;
+
+    if (!msg.reactions[reaction]) {
+      msg.reactions[reaction] = [];
+    }
+
+    // prevent duplicate reaction from same user
+    if (!msg.reactions[reaction].includes(socket.username)) {
+      msg.reactions[reaction].push(socket.username);
+    }
+
+    io.emit('message reaction', {
+      msgId,
+      reactions: msg.reactions
+    });
+
+  });
+
+  // TYPING
+  socket.on("typing", () => {
+    if (!socket.username) return;
+    socket.broadcast.emit("typing", { username: socket.username });
+  });
+
+  socket.on("stop typing", () => {
+    if (!socket.username) return;
+    socket.broadcast.emit("stop typing", { username: socket.username });
+  });
+
+  // DISCONNECT
+  socket.on('disconnect', () => {
+
+    onlineUsers = Math.max(onlineUsers - 1, 0);
+
+    if (socket.username) {
+
+      const leaveMsg = {
+        id: Date.now() + "_" + Math.random(),
+        username: "System",
+        role: "system",
+        content: socket.username + " left the community",
+        timestamp: new Date(),
+        online: onlineUsers,
+        reactions: {}
+      };
+
+      messages.push(leaveMsg);
+      if (messages.length > 200) messages.shift();
+
+      io.emit('chat message', leaveMsg);
+    }
+
+  });
 
 });
-
 
 app.get('/', (req, res) => {
   res.send("Smart2z Community Chat Server Running");
 });
-
 
 const PORT = process.env.PORT || 3000;
 
