@@ -29,7 +29,7 @@ io.on('connection', (socket) => {
 
     const joinMsg = {
       id: Date.now() + "_" + Math.random(),
-      username: "System",
+      username: username,
       role: "system",
       content: socket.username + " joined the community",
       timestamp: new Date(),
