@@ -103,43 +103,41 @@ socket.on('chat message', (data) => {
 
   });
 
-  // EDIT MESSAGE
-  socket.on('edit message', ({ msgId, newContent }) => {
-
-    const msg = messages.find(m => m.id === msgId);
-
-    if (!msg) return;
-
-    if (msg.username === socket.username) {
-
-      msg.content = newContent;
-
-      io.emit('message edited', {
-        msgId,
-        newContent
-      });
-
-    }
-
-  });
   
- /* socket.on("message edited", (data) => {
-  const msgEl = document.getElementById(`msg-${data.msgId}`);
+		// EDIT MESSAGE
+	socket.on('edit message', ({ msgId, newContent }) => {
 
-  if (msgEl) {
-    const textEl = msgEl.querySelector(".msg-text");
+	  const msg = messages.find(m => m.id === msgId);
+	  if (!msg) return;
 
-    textEl.innerText = data.newContent;
+	  // allow only owner to edit
+	  if (msg.username === socket.username) {
 
-    // Add edited label if not already there
-    if (!msgEl.querySelector(".edited-label")) {
-      textEl.insertAdjacentHTML("afterend", '<span class="edited-label">(edited)</span>');
-    }
-  }
-}); 
-   */
-  
-  
+		let cleaned = (newContent || "").trim();
+
+		// prevent empty message
+		if (!cleaned) return;
+
+		// prevent duplicate update
+		if (cleaned === msg.content) return;
+
+		// update message
+		msg.content = cleaned;
+
+		// mark as edited
+		msg.edited = true;
+
+		// emit updated message
+		io.emit('message edited', {
+		  msgId,
+		  newContent: cleaned,
+		  edited: true
+		});
+
+	  }
+
+	});
+	  
 
   // REACT TO MESSAGE
   socket.on('react', ({ msgId, reaction }) => {
