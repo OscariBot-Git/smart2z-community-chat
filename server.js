@@ -104,7 +104,7 @@ socket.on('chat message', (data) => {
   });
 
   
-	// EDIT MESSAGE
+		// EDIT MESSAGE
 	socket.on('edit message', ({ msgId, newContent }) => {
 
 	  const msg = messages.find(m => m.id === msgId);
@@ -113,10 +113,7 @@ socket.on('chat message', (data) => {
 	  // allow only owner to edit
 	  if (msg.username === socket.username) {
 
-		// clean input and remove existing "(edited)" if user typed it
-		let cleaned = (newContent || "")
-		  .replace(/\s*\(edited\)$/i, "") // remove existing label
-		  .trim();
+		let cleaned = (newContent || "").trim();
 
 		// prevent empty message
 		if (!cleaned) return;
@@ -124,19 +121,17 @@ socket.on('chat message', (data) => {
 		// prevent duplicate update
 		if (cleaned === msg.content) return;
 
-		//update message
+		// update message
 		msg.content = cleaned;
 
-		//mark as edited
+		// mark as edited
 		msg.edited = true;
 
-		//append label ONCE (server-controlled)
-		const contentWithLabel = `${cleaned} (edited)`;
-
-		//emit updated message
+		// emit updated message
 		io.emit('message edited', {
 		  msgId,
-		  newContent: contentWithLabel
+		  newContent: cleaned,
+		  edited: true
 		});
 
 	  }
