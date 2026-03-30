@@ -103,25 +103,46 @@ socket.on('chat message', (data) => {
 
   });
 
-  // EDIT MESSAGE
-  socket.on('edit message', ({ msgId, newContent }) => {
+  
+	// EDIT MESSAGE
+	socket.on('edit message', ({ msgId, newContent }) => {
 
-    const msg = messages.find(m => m.id === msgId);
+	  const msg = messages.find(m => m.id === msgId);
+	  if (!msg) return;
 
-    if (!msg) return;
+	  // allow only owner to edit
+	  if (msg.username === socket.username) {
 
-    if (msg.username === socket.username) {
+		// clean input and remove existing "(edited)" if user typed it
+		let cleaned = (newContent || "")
+		  .replace(/\s*\(edited\)$/i, "") // remove existing label
+		  .trim();
 
-      msg.content = newContent;
+		// prevent empty message
+		if (!cleaned) return;
 
-      io.emit('message edited', {
-        msgId,
-        newContent
-      });
+		// prevent duplicate update
+		if (cleaned === msg.content) return;
 
-    }
+		//update message
+		msg.content = cleaned;
 
-  });
+		//mark as edited
+		msg.edited = true;
+
+		//append label ONCE (server-controlled)
+		const contentWithLabel = `${cleaned} (edited)`;
+
+		//emit updated message
+		io.emit('message edited', {
+		  msgId,
+		  newContent: contentWithLabel
+		});
+
+	  }
+
+	});
+	  
 
   // REACT TO MESSAGE
   socket.on('react', ({ msgId, reaction }) => {
