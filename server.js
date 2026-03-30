@@ -104,13 +104,7 @@ socket.on('chat message', (data) => {
 		  id: Date.now() + "_" + Math.random(),
 		  username: "System",
 		  role: "system",
-		  content:
-			msgToDelete.username === socket.username
-			  ? "You deleted a message"
-			  : `${msgToDelete.username} deleted a message`,
-		  timestamp: new Date(),
-		  reactions: {},
-		  online: onlineUsers // optional if you want to show online count
+		  content: `${msgToDelete.username} deleted a message`		  
 		};
 
 		// Push system message into messages array
