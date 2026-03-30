@@ -72,7 +72,8 @@ socket.on('chat message', (data) => {
     content: content,
     replyTo: replyTo, // ✅ NEW
     timestamp: new Date(),
-    reactions: {}
+	edited: false,
+    reactions: {}	
   };
 
   messages.push(msg);
