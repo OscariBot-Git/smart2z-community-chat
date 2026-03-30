@@ -86,23 +86,42 @@ socket.on('chat message', (data) => {
   
   
 
-  // DELETE MESSAGE
-  socket.on('delete message', (msgId) => {
+	 // DELETE MESSAGE
+	socket.on('delete message', (msgId) => {
+	  const index = messages.findIndex(m => m.id === msgId);
+	  if (index === -1) return;
 
-    const index = messages.findIndex(m => m.id === msgId);
+	  const msgToDelete = messages[index];
 
-    if (index === -1) return;
+	  // Only owner or admin can delete
+	  if (msgToDelete.username === socket.username || socket.role === "Admin") {
+		
+		// Remove original message from array
+		messages.splice(index, 1);
 
-    // Only owner or admin can delete
-    if (
-      messages[index].username === socket.username ||
-      socket.role === "Admin"
-    ) {
-      messages.splice(index, 1);
-      io.emit('message deleted', msgId);
-    }
+		// Create system-style message
+		const deletedMsg = {
+		  id: Date.now() + "_" + Math.random(),
+		  username: "System",
+		  role: "system",
+		  content:
+			msgToDelete.username === socket.username
+			  ? "You deleted a message"
+			  : `${msgToDelete.username} deleted a message`,
+		  timestamp: new Date(),
+		  reactions: {},
+		  online: onlineUsers // optional if you want to show online count
+		};
 
-  });
+		// Push system message into messages array
+		messages.push(deletedMsg);
+		if (messages.length > 200) messages.shift();
+
+		// Emit system message to all clients
+		io.emit('chat message', deletedMsg);
+	  }
+	});
+
 
   
 		// EDIT MESSAGE
