@@ -84,9 +84,26 @@ socket.on('chat message', (data) => {
 });
   
   
-  
+  // DELETE MESSAGE
+  socket.on('delete message', (msgId) => {
 
-	 // DELETE MESSAGE
+    const index = messages.findIndex(m => m.id === msgId);
+
+    if (index === -1) return;
+
+    // Only owner or admin can delete
+    if (
+      messages[index].username === socket.username ||
+      socket.role === "Admin"
+    ) {
+      messages.splice(index, 1);
+      io.emit('message deleted', msgId);
+    }
+
+  });
+
+
+	/*  // DELETE MESSAGE
 	socket.on('delete message', (msgId) => {
 	  const index = messages.findIndex(m => m.id === msgId);
 	  if (index === -1) return;
@@ -119,7 +136,7 @@ socket.on('chat message', (data) => {
 		io.emit('chat message', deletedMsg);
 	  }
 	});
-
+ */
 
   
 		// EDIT MESSAGE
