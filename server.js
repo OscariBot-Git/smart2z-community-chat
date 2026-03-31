@@ -84,41 +84,32 @@ socket.on('chat message', (data) => {
   io.emit('chat message', msg);
 
 });
+	
+	
+	// DELETE MESSAGE
+socket.on('delete message', (msgId) => {
 
-  
-		 // DELETE MESSAGE
-	socket.on('delete message', (msgId) => {
+  const msg = messages.find(m => m.id === msgId);
+  if (!msg) return;
 
-	  const index = messages.findIndex(m => m.id === msgId);
-	  if (index === -1) return;
+  // Only owner or admin can delete
+  if (msg.username === socket.username || socket.role === "Admin") {
 
-	  const msg = messages[index];
+    msg.content = socket.username + " deleted this message!"
 
-	  // Only owner or admin can delete
-	  if (msg.username === socket.username || socket.role === "Admin") {
-
-		messages.splice(index, 1);
-
-		// Create system-style message
-		const deletedMsg = {
+    const deletedMsg = {
 			  id: Date.now() + "_" + Math.random(),
-			  msgId: msgId,
-			  timestamp: new Date(),
-			  online: onlineUsers,
-			  username: socket.username,
-			  role: "system", 
-			  type: "delete",
-			  content: socket.username + " deleted a message"
+			  msgId: msgId,		
+			  msg.deleted = true;
+			  username: socket.username,			  
+			  content: msg.content
 			};
 
-		// Push system message
-		messages.push(deletedMsg);
-		if (messages.length > 200) messages.shift();
+    io.emit('message deleted', deletedMsg);
+  }
 
-		io.emit('message deleted', deletedMsg);
-	  }
-
-	});
+});
+	
 
   
 		// EDIT MESSAGE
