@@ -201,7 +201,7 @@ socket.on('chat message', (data) => {
         id: Date.now() + "_" + Math.random(),
         username: "System",
         role: "system",
-		type: "user-disconnected",
+		type: "user-left",
         content: socket.username + " left the community",
         timestamp: new Date(),
         online: onlineUsers,
