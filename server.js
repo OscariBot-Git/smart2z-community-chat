@@ -31,6 +31,7 @@ io.on('connection', (socket) => {
       id: Date.now() + "_" + Math.random(),
       username: socket.username,
       role: "system",
+	  type: "user-join",
       content: socket.username + " joined the community",
       timestamp: new Date(),
       online: onlineUsers,
@@ -69,6 +70,7 @@ socket.on('chat message', (data) => {
     id: Date.now() + "_" + Math.random(),
     username: socket.username,
     role: socket.role,
+	type: "chat",
     content: content,
     replyTo: replyTo, // ✅ NEW
     timestamp: new Date(),
@@ -104,7 +106,8 @@ socket.on('chat message', (data) => {
 			  timestamp: new Date(),
 			  online: onlineUsers,
 			  username: socket.username,
-			  role: "system",          
+			  role: "system", 
+			  type: "delete",
 			  content: socket.username + " deleted a message"
 			};
 
@@ -112,7 +115,7 @@ socket.on('chat message', (data) => {
 		messages.push(deletedMsg);
 		if (messages.length > 200) messages.shift();
 
-		io.emit('message deleted', deletedMsg);
+		io.emit('chat message', deletedMsg);
 	  }
 
 	});
@@ -198,6 +201,7 @@ socket.on('chat message', (data) => {
         id: Date.now() + "_" + Math.random(),
         username: "System",
         role: "system",
+		type: "user-disconnected",
         content: socket.username + " left the community",
         timestamp: new Date(),
         online: onlineUsers,
