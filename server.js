@@ -105,6 +105,7 @@ socket.on('chat message', (data) => {
 		  username: "System",
 		  role: "system",
 		  content: `${msgToDelete.username} deleted a message`,
+		  deletedMsgId: msgId, 
 		  timestamp: new Date(),
 		  online: onlineUsers,
           reactions: {}
