@@ -115,7 +115,7 @@ socket.on('chat message', (data) => {
 		messages.push(deletedMsg);
 		if (messages.length > 200) messages.shift();
 
-		io.emit('chat message', deletedMsg);
+		io.emit('message deleted', deletedMsg);
 	  }
 
 	});
