@@ -104,7 +104,8 @@ socket.on('chat message', (data) => {
 		  id: Date.now() + "_" + Math.random(),
 		  username: "System",
 		  role: "system",
-		  content: `${msgToDelete.username} deleted a message`		  
+		  content: `${msgToDelete.username} deleted a message`,
+		  timestamp: new Date()
 		};
 
 		// Push system message into messages array
