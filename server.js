@@ -113,7 +113,7 @@ socket.on('chat message', (data) => {
 		if (messages.length > 200) messages.shift();
 
 		// Emit system message to all clients
-		socket.broadcast.emit('chat message', deletedMsg);
+		io.emit('chat message', deletedMsg);
 	  }
 	});
 
