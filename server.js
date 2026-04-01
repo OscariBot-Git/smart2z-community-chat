@@ -96,11 +96,11 @@ socket.on('delete message', (msgId) => {
   if (msg.username === socket.username || socket.role === "Admin") {
 
     msg.content = socket.username + " deleted this message!";
-
+    msg.deleted = true;
+	
     const deletedMsg = {
 			  id: Date.now() + "_" + Math.random(),
 			  msgId: msgId,		
-			  msg.deleted = true;
 			  username: socket.username,			  
 			  content: msg.content
 			};
