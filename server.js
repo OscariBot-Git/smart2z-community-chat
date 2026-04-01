@@ -95,7 +95,7 @@ socket.on('delete message', (msgId) => {
   // Only owner or admin can delete
   if (msg.username === socket.username || socket.role === "Admin") {
 
-    msg.content = socket.username + " deleted this message!";
+    msg.content = socket.username + " deleted this message";
     msg.deleted = true;	
 	msg.role = "system";
 	msg.type = "delete";    
