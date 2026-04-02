@@ -1,3 +1,4 @@
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -13,6 +14,7 @@ const io = new Server(server, {
   cors: { origin: '*' }
 });
 
+console.log("MONGO_URI:", process.env.MONGO_URI);
 
 // =====================
 // 🔗 MONGODB CONNECTION
@@ -23,6 +25,9 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart2z_cha
 })
 .then(() => console.log("MongoDB connected"))
 .catch(err => console.error("MongoDB error:", err));
+
+
+
 
 
 // =====================
