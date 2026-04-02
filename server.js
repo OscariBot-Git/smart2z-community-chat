@@ -201,15 +201,13 @@ io.on('connection', (socket) => {
         { id: msgId },
         {
           content: cleaned,
+		  timestamp: timestamp,
           edited: true
         }
       );
 
       io.emit('message edited', {
-        msgId,
-        newContent: cleaned,
-        edited: true
-      });
+        msgId, newContent: cleaned, timestamp: timestamp, edited: true});
 
     } catch (err) {
       console.error("EDIT ERROR:", err);
