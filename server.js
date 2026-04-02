@@ -1,4 +1,4 @@
-
+// server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -19,16 +19,11 @@ console.log("MONGO_URI:", process.env.MONGO_URI);
 // =====================
 // 🔗 MONGODB CONNECTION
 // =====================
-mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart2z_chat', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log("MongoDB connected"))
-.catch(err => console.error("MongoDB error:", err));
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart2z_chat';
 
-
-
-
+mongoose.connect(MONGO_URI)
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ MongoDB error:", err));
 
 // =====================
 // 📦 MESSAGE SCHEMA
@@ -49,13 +44,11 @@ const messageSchema = new mongoose.Schema({
 
 const Message = mongoose.model('Message', messageSchema);
 
-
 // =====================
 // ⚙️ CONFIG
 // =====================
 let onlineUsers = 0;
 const MAX_MESSAGES = 200;
-
 
 // =====================
 // 🧹 AUTO CLEAN OLD MESSAGES
@@ -69,7 +62,6 @@ async function trimMessages() {
     await Message.deleteMany({ _id: { $in: ids } });
   }
 }
-
 
 // =====================
 // 🔌 SOCKET CONNECTION
@@ -114,7 +106,6 @@ io.on('connection', (socket) => {
     }
   });
 
-
   // =====================
   // 💬 SEND MESSAGE
   // =====================
@@ -156,7 +147,6 @@ io.on('connection', (socket) => {
     }
   });
 
-
   // =====================
   // ❌ DELETE MESSAGE
   // =====================
@@ -193,7 +183,6 @@ io.on('connection', (socket) => {
     }
   });
 
-
   // =====================
   // ✏️ EDIT MESSAGE
   // =====================
@@ -227,7 +216,6 @@ io.on('connection', (socket) => {
     }
   });
 
-
   // =====================
   // 👍 REACTIONS
   // =====================
@@ -258,7 +246,6 @@ io.on('connection', (socket) => {
     }
   });
 
-
   // =====================
   // ⌨️ TYPING
   // =====================
@@ -271,7 +258,6 @@ io.on('connection', (socket) => {
     if (!socket.username) return;
     socket.broadcast.emit("stop typing", { username: socket.username });
   });
-
 
   // =====================
   // 🚪 DISCONNECT
@@ -305,14 +291,12 @@ io.on('connection', (socket) => {
 
 });
 
-
 // =====================
 // 🌐 ROOT ROUTE
 // =====================
 app.get('/', (req, res) => {
   res.send("Smart2z Community Chat Server Running");
 });
-
 
 // =====================
 // 🚀 START SERVER
