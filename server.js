@@ -212,59 +212,56 @@ io.on('connection', (socket) => {
       console.error("EDIT ERROR:", err);
     }
   });
+  
 
   // =====================
   // 👍 REACTIONS
   // =====================
-	 socket.on('react', async ({ msgId, reaction }) => { 
-  try {
-    if (!socket.username) return; // ✅ safety check
+		socket.on('react', async ({ msgId, reaction }) => { 
+	  try {
+		if (!socket.username) return;
 
-    const msg = await Message.findOne({ id: msgId });
-    if (!msg) return;
+		const msg = await Message.findOne({ id: msgId });
+		if (!msg) return;
 
-    if (!msg.reactions) msg.reactions = {};
+		if (!msg.reactions) msg.reactions = {};
 
-    // ✅ Remove user from ALL reactions
-    for (let emoji in msg.reactions) {
-      msg.reactions[emoji] = msg.reactions[emoji].filter(
-        user => user !== socket.username
-      );
+		const newReactions = {};
 
-      if (msg.reactions[emoji].length === 0) {
-        delete msg.reactions[emoji];
-      }
-    }
+		// ✅ Remove user from all
+		for (let emoji in msg.reactions) {
+		  const filtered = msg.reactions[emoji].filter(
+			user => user !== socket.username
+		  );
 
-    // ✅ Toggle (optional but recommended)
-    if (msg.reactions[reaction]?.includes(socket.username)) {
-      await msg.save();
+		  if (filtered.length > 0) {
+			newReactions[emoji] = filtered;
+		  }
+		}
 
-      return io.emit('message reaction', {
-        msgId,
-        reactions: msg.reactions
-      });
-    }
+		// ✅ Add new reaction
+		if (!newReactions[reaction]) {
+		  newReactions[reaction] = [];
+		}
 
-    // ✅ Add new reaction
-    if (!msg.reactions[reaction]) {
-      msg.reactions[reaction] = [];
-    }
+		newReactions[reaction].push(socket.username);
 
-    msg.reactions[reaction].push(socket.username);
+		// ✅ CRITICAL: overwrite entire object
+		msg.reactions = newReactions;
 
-    await msg.save();
+		await msg.save();
 
-    io.emit('message reaction', {
-      msgId,
-      reactions: msg.reactions
-    });
+		io.emit('message reaction', {
+		  msgId,
+		  reactions: msg.reactions
+		});
 
-  } catch (err) {
-    console.error("REACTION ERROR:", err);
-  }
-});
-
+	  } catch (err) {
+		console.error("REACTION ERROR:", err);
+	  }
+	});
+	
+	
   // =====================
   // ⌨️ TYPING
   // =====================
