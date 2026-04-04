@@ -217,51 +217,68 @@ io.on('connection', (socket) => {
   // =====================
   // 👍 REACTIONS
   // =====================
-		socket.on('react', async ({ msgId, reaction }) => { 
+	socket.on('react', async ({ msgId, reaction }) => { 
 	  try {
 		if (!socket.username) return;
 
-		const msg = await Message.findOne({ id: msgId });
+		const username = socket.username;
+
+		// ✅ Step 1: Get only reactions
+		const msg = await Message.findOne({ id: msgId }).select('reactions');
 		if (!msg) return;
 
 		if (!msg.reactions) msg.reactions = {};
 
-		const newReactions = {};
+		// ✅ 🚨 Improvement: if user already reacted with same emoji → do nothing
+		if (msg.reactions[reaction]?.includes(username)) {
+		  return;
+		}
 
-		// ✅ Remove user from all
+		const updates = {};
+
+		// ✅ Step 2: Remove user from ALL reactions (only if needed)
 		for (let emoji in msg.reactions) {
-		  const filtered = msg.reactions[emoji].filter(
-			user => user !== socket.username
-		  );
+		  if (msg.reactions[emoji].includes(username)) {
 
-		  if (filtered.length > 0) {
-			newReactions[emoji] = filtered;
+			const filtered = msg.reactions[emoji].filter(
+			  user => user !== username
+			);
+
+			// ✅ Optimization: only update changed fields
+			updates[`reactions.${emoji}`] = filtered;
 		  }
 		}
 
-		// ✅ Add new reaction
-		if (!newReactions[reaction]) {
-		  newReactions[reaction] = [];
+		// ✅ Step 3: Apply removal only if something changed
+		if (Object.keys(updates).length > 0) {
+		  await Message.updateOne(
+			{ id: msgId },
+			{ $set: updates }
+		  );
 		}
 
-		newReactions[reaction].push(socket.username);
+		// ✅ Step 4: Add user to selected reaction (no duplicates)
+		await Message.updateOne(
+		  { id: msgId },
+		  {
+			$addToSet: {
+			  [`reactions.${reaction}`]: username
+			}
+		  }
+		);
 
-		// ✅ CRITICAL: overwrite entire object
-		msg.reactions = newReactions;
-
-		await msg.save();
+		// ✅ Step 5: Get updated reactions
+		const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
 
 		io.emit('message reaction', {
 		  msgId,
-		  reactions: msg.reactions
+		  reactions: updatedMsg.reactions || {}
 		});
 
 	  } catch (err) {
 		console.error("REACTION ERROR:", err);
 	  }
 	});
-	
-	
   // =====================
   // ⌨️ TYPING
   // =====================
