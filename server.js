@@ -216,61 +216,54 @@ io.on('connection', (socket) => {
   // =====================
   // 👍 REACTIONS
   // =====================
-	  socket.on('react', async ({ msgId, reaction }) => { 
-	  try {
-		const msg = await Message.findOne({ id: msgId });
-		if (!msg) return;
+	 socket.on('react', async ({ msgId, reaction }) => { 
+  try {
+    if (!socket.username) return; // ✅ safety check
 
-		if (!msg.reactions) msg.reactions = {};
+    const msg = await Message.findOne({ id: msgId });
+    if (!msg) return;
 
-		// STEP 1: Remove user from ALL reactions
-		for (let emoji in msg.reactions) {
-		  msg.reactions[emoji] = msg.reactions[emoji].filter(
-			user => user !== socket.username
-		  );
+    if (!msg.reactions) msg.reactions = {};
 
-		  // Optional: clean empty arrays
-		  if (msg.reactions[emoji].length === 0) {
-			delete msg.reactions[emoji];
-		  }
-		}
+    // ✅ Remove user from ALL reactions
+    for (let emoji in msg.reactions) {
+      msg.reactions[emoji] = msg.reactions[emoji].filter(
+        user => user !== socket.username
+      );
 
-		// If user already reacted with same emoji → remove (toggle off)
-		if (msg.reactions[reaction]?.includes(socket.username)) {
-		  msg.reactions[reaction] = msg.reactions[reaction].filter(
-			user => user !== socket.username
-		  );
+      if (msg.reactions[emoji].length === 0) {
+        delete msg.reactions[emoji];
+      }
+    }
 
-		  if (msg.reactions[reaction].length === 0) {
-			delete msg.reactions[reaction];
-		  }
+    // ✅ Toggle (optional but recommended)
+    if (msg.reactions[reaction]?.includes(socket.username)) {
+      await msg.save();
 
-		  await msg.save();
+      return io.emit('message reaction', {
+        msgId,
+        reactions: msg.reactions
+      });
+    }
 
-		  return io.emit('message reaction', {
-			msgId,
-			reactions: msg.reactions
-		  });
-		}
+    // ✅ Add new reaction
+    if (!msg.reactions[reaction]) {
+      msg.reactions[reaction] = [];
+    }
 
-		// STEP 2: Add user to the new reaction
-		if (!msg.reactions[reaction]) {
-		  msg.reactions[reaction] = [];
-		}
+    msg.reactions[reaction].push(socket.username);
 
-		msg.reactions[reaction].push(socket.username);
+    await msg.save();
 
-		await msg.save();
+    io.emit('message reaction', {
+      msgId,
+      reactions: msg.reactions
+    });
 
-		io.emit('message reaction', {
-		  msgId,
-		  reactions: msg.reactions
-		});
-
-	  } catch (err) {
-		console.error("REACTION ERROR:", err);
-	  }
-	});
+  } catch (err) {
+    console.error("REACTION ERROR:", err);
+  }
+});
 
   // =====================
   // ⌨️ TYPING
