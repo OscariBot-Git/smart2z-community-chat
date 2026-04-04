@@ -216,32 +216,61 @@ io.on('connection', (socket) => {
   // =====================
   // 👍 REACTIONS
   // =====================
-  socket.on('react', async ({ msgId, reaction }) => {
-    try {
-      const msg = await Message.findOne({ id: msgId });
-      if (!msg) return;
+	  socket.on('react', async ({ msgId, reaction }) => { 
+	  try {
+		const msg = await Message.findOne({ id: msgId });
+		if (!msg) return;
 
-      if (!msg.reactions) msg.reactions = {};
+		if (!msg.reactions) msg.reactions = {};
 
-      if (!msg.reactions[reaction]) {
-        msg.reactions[reaction] = [];
-      }
+		// STEP 1: Remove user from ALL reactions
+		for (let emoji in msg.reactions) {
+		  msg.reactions[emoji] = msg.reactions[emoji].filter(
+			user => user !== socket.username
+		  );
 
-      if (!msg.reactions[reaction].includes(socket.username)) {
-        msg.reactions[reaction].push(socket.username);
-      }
+		  // Optional: clean empty arrays
+		  if (msg.reactions[emoji].length === 0) {
+			delete msg.reactions[emoji];
+		  }
+		}
 
-      await msg.save();
+		// If user already reacted with same emoji → remove (toggle off)
+		if (msg.reactions[reaction]?.includes(socket.username)) {
+		  msg.reactions[reaction] = msg.reactions[reaction].filter(
+			user => user !== socket.username
+		  );
 
-      io.emit('message reaction', {
-        msgId,
-        reactions: msg.reactions
-      });
+		  if (msg.reactions[reaction].length === 0) {
+			delete msg.reactions[reaction];
+		  }
 
-    } catch (err) {
-      console.error("REACTION ERROR:", err);
-    }
-  });
+		  await msg.save();
+
+		  return io.emit('message reaction', {
+			msgId,
+			reactions: msg.reactions
+		  });
+		}
+
+		// STEP 2: Add user to the new reaction
+		if (!msg.reactions[reaction]) {
+		  msg.reactions[reaction] = [];
+		}
+
+		msg.reactions[reaction].push(socket.username);
+
+		await msg.save();
+
+		io.emit('message reaction', {
+		  msgId,
+		  reactions: msg.reactions
+		});
+
+	  } catch (err) {
+		console.error("REACTION ERROR:", err);
+	  }
+	});
 
   // =====================
   // ⌨️ TYPING
