@@ -217,26 +217,26 @@ io.on('connection', (socket) => {
   // =====================
   // 👍 REACTIONS
   // =====================
-	socket.on('react', async ({ msgId, reaction }) => { 
+		socket.on('react', async ({ msgId, reaction }) => { 
 	  try {
 		if (!socket.username) return;
 
 		const username = socket.username;
 
-		// ✅ Step 1: Get only reactions
 		const msg = await Message.findOne({ id: msgId }).select('reactions');
 		if (!msg) return;
 
 		if (!msg.reactions) msg.reactions = {};
 
-		// ✅ 🚨 Improvement: if user already reacted with same emoji → do nothing
+		// ✅ Ignore if same reaction
 		if (msg.reactions[reaction]?.includes(username)) {
 		  return;
 		}
 
-		const updates = {};
+		const setUpdates = {};
+		const unsetUpdates = {};
 
-		// ✅ Step 2: Remove user from ALL reactions (only if needed)
+		// ✅ Remove user from all reactions
 		for (let emoji in msg.reactions) {
 		  if (msg.reactions[emoji].includes(username)) {
 
@@ -244,20 +244,30 @@ io.on('connection', (socket) => {
 			  user => user !== username
 			);
 
-			// ✅ Optimization: only update changed fields
-			updates[`reactions.${emoji}`] = filtered;
+			if (filtered.length > 0) {
+			  // ✅ Keep updated array
+			  setUpdates[`reactions.${emoji}`] = filtered;
+			} else {
+			  // ✅ REMOVE empty reaction completely
+			  unsetUpdates[`reactions.${emoji}`] = "";
+			}
 		  }
 		}
 
-		// ✅ Step 3: Apply removal only if something changed
-		if (Object.keys(updates).length > 0) {
-		  await Message.updateOne(
-			{ id: msgId },
-			{ $set: updates }
-		  );
+		// ✅ Apply updates (only if needed)
+		const updateOps = {};
+		if (Object.keys(setUpdates).length > 0) {
+		  updateOps.$set = setUpdates;
+		}
+		if (Object.keys(unsetUpdates).length > 0) {
+		  updateOps.$unset = unsetUpdates;
 		}
 
-		// ✅ Step 4: Add user to selected reaction (no duplicates)
+		if (Object.keys(updateOps).length > 0) {
+		  await Message.updateOne({ id: msgId }, updateOps);
+		}
+
+		// ✅ Add new reaction
 		await Message.updateOne(
 		  { id: msgId },
 		  {
@@ -267,7 +277,7 @@ io.on('connection', (socket) => {
 		  }
 		);
 
-		// ✅ Step 5: Get updated reactions
+		// ✅ Get updated reactions
 		const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
 
 		io.emit('message reaction', {
@@ -279,6 +289,8 @@ io.on('connection', (socket) => {
 		console.error("REACTION ERROR:", err);
 	  }
 	});
+		
+	
   // =====================
   // ⌨️ TYPING
   // =====================
