@@ -217,7 +217,7 @@ io.on('connection', (socket) => {
   // =====================
   // 👍 REACTIONS
   // =====================
-		socket.on('react', async ({ msgId, reaction }) => { 
+	socket.on('react', async ({ msgId, reaction }) => { 
 	  try {
 		if (!socket.username) return;
 
@@ -228,15 +228,39 @@ io.on('connection', (socket) => {
 
 		if (!msg.reactions) msg.reactions = {};
 
-		// ✅ Ignore if same reaction
-		if (msg.reactions[reaction]?.includes(username)) {
-		  return;
-		}
-
 		const setUpdates = {};
 		const unsetUpdates = {};
 
-		// ✅ Remove user from all reactions
+		// ✅ 🔥 TOGGLE: if user already reacted with same emoji → remove it
+		if (msg.reactions[reaction]?.includes(username)) {
+
+		  const filtered = msg.reactions[reaction].filter(
+			user => user !== username
+		  );
+
+		  if (filtered.length > 0) {
+			setUpdates[`reactions.${reaction}`] = filtered;
+		  } else {
+			unsetUpdates[`reactions.${reaction}`] = "";
+		  }
+
+		  const updateOps = {};
+		  if (Object.keys(setUpdates).length > 0) updateOps.$set = setUpdates;
+		  if (Object.keys(unsetUpdates).length > 0) updateOps.$unset = unsetUpdates;
+
+		  if (Object.keys(updateOps).length > 0) {
+			await Message.updateOne({ id: msgId }, updateOps);
+		  }
+
+		  const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
+
+		  return io.emit('message reaction', {
+			msgId,
+			reactions: updatedMsg.reactions || {}
+		  });
+		}
+
+		// ✅ Remove user from all other reactions
 		for (let emoji in msg.reactions) {
 		  if (msg.reactions[emoji].includes(username)) {
 
@@ -245,23 +269,16 @@ io.on('connection', (socket) => {
 			);
 
 			if (filtered.length > 0) {
-			  // ✅ Keep updated array
 			  setUpdates[`reactions.${emoji}`] = filtered;
 			} else {
-			  // ✅ REMOVE empty reaction completely
 			  unsetUpdates[`reactions.${emoji}`] = "";
 			}
 		  }
 		}
 
-		// ✅ Apply updates (only if needed)
 		const updateOps = {};
-		if (Object.keys(setUpdates).length > 0) {
-		  updateOps.$set = setUpdates;
-		}
-		if (Object.keys(unsetUpdates).length > 0) {
-		  updateOps.$unset = unsetUpdates;
-		}
+		if (Object.keys(setUpdates).length > 0) updateOps.$set = setUpdates;
+		if (Object.keys(unsetUpdates).length > 0) updateOps.$unset = unsetUpdates;
 
 		if (Object.keys(updateOps).length > 0) {
 		  await Message.updateOne({ id: msgId }, updateOps);
@@ -277,7 +294,7 @@ io.on('connection', (socket) => {
 		  }
 		);
 
-		// ✅ Get updated reactions
+		// ✅ Emit updated reactions
 		const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
 
 		io.emit('message reaction', {
@@ -289,7 +306,6 @@ io.on('connection', (socket) => {
 		console.error("REACTION ERROR:", err);
 	  }
 	});
-		
 	
   // =====================
   // ⌨️ TYPING
