@@ -217,115 +217,85 @@ io.on('connection', (socket) => {
   // =====================
   // 👍 REACTIONS
   // =====================
-	socket.on('react', async ({ msgId, reaction }) => {
+	socket.on('react', async ({ msgId, reaction }) => { 
 	  try {
 		if (!socket.username) return;
 
 		const username = socket.username;
 
-		const updatedMsg = await Message.findOneAndUpdate(
-		  { id: msgId },
-		  [
-			{
-			  $set: {
-				reactions: {
-				  $let: {
-					vars: {
-					  current: { $ifNull: ["$reactions", {}] }
-					},
-					in: {
-					  $let: {
-						vars: {
-						  // ✅ Remove user from all reactions
-						  cleaned: {
-							$arrayToObject: {
-							  $map: {
-								input: { $objectToArray: "$$current" },
-								as: "r",
-								in: {
-								  k: "$$r.k",
-								  v: {
-									$filter: {
-									  input: "$$r.v",
-									  as: "u",
-									  cond: { $ne: ["$$u", username] }
-									}
-								  }
-								}
-							  }
-							}
-						  }
-						},
-						in: {
-						  $let: {
-							vars: {
-							  // ✅ Check if user already reacted with same emoji (before removal)
-							  alreadyReacted: {
-								$in: [
-								  username,
-								  {
-									$ifNull: [
-									  { $getField: { field: reaction, input: "$$current" } },
-									  []
-									]
-								  }
-								]
-							  }
-							},
-							in: {
-							  // ✅ Toggle logic
-							  $cond: [
-								"$$alreadyReacted",
-								// 👉 REMOVE ONLY (toggle off)
-								{
-								  $arrayToObject: {
-									$filter: {
-									  input: { $objectToArray: "$$cleaned" },
-									  as: "r",
-									  cond: { $gt: [{ $size: "$$r.v" }, 0] }
-									}
-								  }
-								},
-								// 👉 ADD NEW REACTION
-								{
-								  $mergeObjects: [
-									{
-									  $arrayToObject: {
-										$filter: {
-										  input: { $objectToArray: "$$cleaned" },
-										  as: "r",
-										  cond: { $gt: [{ $size: "$$r.v" }, 0] }
-										}
-									  }
-									},
-									{
-									  [reaction]: {
-										$concatArrays: [
-										  {
-											$ifNull: [
-											  { $getField: { field: reaction, input: "$$cleaned" } },
-											  []
-											]
-										  },
-										  [username]
-										]
-									  }
-									}
-								  ]
-								}
-							  ]
-							}
-						  }
-						}
-					  }
-					}
-				  }
-				}
-			  }
+		const msg = await Message.findOne({ id: msgId }).select('reactions');
+		if (!msg) return;
+
+		if (!msg.reactions) msg.reactions = {};
+
+		const setUpdates = {};
+		const unsetUpdates = {};
+
+		// ✅ 🔥 TOGGLE: if user already reacted with same emoji → remove it
+		if (msg.reactions[reaction]?.includes(username)) {
+
+		  const filtered = msg.reactions[reaction].filter(
+			user => user !== username
+		  );
+
+		  if (filtered.length > 0) {
+			setUpdates[`reactions.${reaction}`] = filtered;
+		  } else {
+			unsetUpdates[`reactions.${reaction}`] = "";
+		  }
+
+		  const updateOps = {};
+		  if (Object.keys(setUpdates).length > 0) updateOps.$set = setUpdates;
+		  if (Object.keys(unsetUpdates).length > 0) updateOps.$unset = unsetUpdates;
+
+		  if (Object.keys(updateOps).length > 0) {
+			await Message.updateOne({ id: msgId }, updateOps);
+		  }
+
+		  const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
+
+		  return io.emit('message reaction', {
+			msgId,
+			reactions: updatedMsg.reactions || {}
+		  });
+		}
+
+		// ✅ Remove user from all other reactions
+		for (let emoji in msg.reactions) {
+		  if (msg.reactions[emoji].includes(username)) {
+
+			const filtered = msg.reactions[emoji].filter(
+			  user => user !== username
+			);
+
+			if (filtered.length > 0) {
+			  setUpdates[`reactions.${emoji}`] = filtered;
+			} else {
+			  unsetUpdates[`reactions.${emoji}`] = "";
 			}
-		  ],
-		  { new: true }
+		  }
+		}
+
+		const updateOps = {};
+		if (Object.keys(setUpdates).length > 0) updateOps.$set = setUpdates;
+		if (Object.keys(unsetUpdates).length > 0) updateOps.$unset = unsetUpdates;
+
+		if (Object.keys(updateOps).length > 0) {
+		  await Message.updateOne({ id: msgId }, updateOps);
+		}
+
+		// ✅ Add new reaction
+		await Message.updateOne(
+		  { id: msgId },
+		  {
+			$addToSet: {
+			  [`reactions.${reaction}`]: username
+			}
+		  }
 		);
+
+		// ✅ Emit updated reactions
+		const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
 
 		io.emit('message reaction', {
 		  msgId,
@@ -336,9 +306,7 @@ io.on('connection', (socket) => {
 		console.error("REACTION ERROR:", err);
 	  }
 	});
-
-
-
+	
   // =====================
   // ⌨️ TYPING
   // =====================
