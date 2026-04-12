@@ -48,7 +48,7 @@ const Message = mongoose.model('Message', messageSchema);
 // ⚙️ CONFIG
 // =====================
 let onlineUsers = 0;
-const MAX_MESSAGES = 200;
+const MAX_MESSAGES = 500;
 
 // =====================
 // 🧹 AUTO CLEAN OLD MESSAGES
@@ -90,14 +90,14 @@ io.on('connection', (socket) => {
         username: socket.username,
         role: "system",
         type: "user-join",
-        content: socket.username + " joined the community",
+        content: socket.username + " joined the chat",
         timestamp: new Date(),
         online: onlineUsers,
         reactions: {}
       };
 
-      await Message.create(joinMsg);
-      await trimMessages();
+    //  await Message.create(joinMsg);
+    //  await trimMessages();
 
       io.emit('chat message', joinMsg);
 
@@ -333,14 +333,14 @@ io.on('connection', (socket) => {
           username: "System",
           role: "system",
           type: "user-left",
-          content: socket.username + " left the community",
+          content: socket.username + " left the chat",
           timestamp: new Date(),
           online: onlineUsers,
           reactions: {}
         };
 
-        await Message.create(leaveMsg);
-        await trimMessages();
+      //  await Message.create(leaveMsg);
+      //  await trimMessages();
 
         io.emit('chat message', leaveMsg);
       }
