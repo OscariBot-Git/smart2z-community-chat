@@ -26,7 +26,7 @@ mongoose.connect(MONGO_URI)
   .catch(err => console.error("❌ MongoDB error:", err));
 
 // =====================
-// 📦 MESSAGE SCHEMA (CHAT)
+// 📦 MESSAGE SCHEMA
 // =====================
 const messageSchema = new mongoose.Schema({
   id: String,
@@ -93,6 +93,8 @@ async function addNews(message, type = "system") {
   io.emit('news update', newsItem);
 }
 
+
+
 // =====================
 // 🔌 SOCKET CONNECTION
 // =====================
@@ -108,6 +110,7 @@ io.on('connection', (socket) => {
 
       onlineUsers++;
 
+      // Load chat history
       const history = await Message.find()
         .sort({ timestamp: 1 })
         .limit(MAX_MESSAGES);
@@ -125,10 +128,14 @@ io.on('connection', (socket) => {
         reactions: {}
       };
 
-      io.emit('chat message', joinMsg);
+    //  await Message.create(joinMsg);
+    //  await trimMessages();
 
-      // 🔥 Add to newsfeed
+      io.emit('chat message', joinMsg);
+	  
+	   // 🔥 Add to newsfeed
       addNews(socket.username + " joined the community", "update");
+
 
     } catch (err) {
       console.error("JOIN ERROR:", err);
@@ -201,6 +208,7 @@ io.on('connection', (socket) => {
     const newPost = await Announcement.create({ title, content });
     io.emit('new announcement', newPost);
   });
+  
 
   // =====================
   // ❌ DELETE MESSAGE
@@ -239,43 +247,172 @@ io.on('connection', (socket) => {
   });
 
   // =====================
+  // ✏️ EDIT MESSAGE
+  // =====================
+  socket.on('edit message', async ({ msgId, newContent }) => {
+    try {
+      let cleaned = (newContent || "").trim();
+      if (!cleaned) return;
+
+      const msg = await Message.findOne({ id: msgId });
+      if (!msg) return;
+
+      if (msg.username !== socket.username) return;
+      if (cleaned === msg.content) return;
+
+      await Message.updateOne(
+        { id: msgId },
+        {
+          content: cleaned,
+          edited: true
+        }
+      );
+
+      io.emit('message edited', {
+        msgId, newContent: cleaned, timestamp: msg.timestamp, edited: true});
+
+    } catch (err) {
+      console.error("EDIT ERROR:", err);
+    }
+  });
+  
+
+  // =====================
+  // 👍 REACTIONS
+  // =====================
+	socket.on('react', async ({ msgId, reaction }) => { 
+	  try {
+		if (!socket.username) return;
+
+		const username = socket.username;
+
+		const msg = await Message.findOne({ id: msgId }).select('reactions');
+		if (!msg) return;
+
+		if (!msg.reactions) msg.reactions = {};
+
+		const setUpdates = {};
+		const unsetUpdates = {};
+
+		// ✅ 🔥 TOGGLE: if user already reacted with same emoji → remove it
+		if (msg.reactions[reaction]?.includes(username)) {
+
+		  const filtered = msg.reactions[reaction].filter(
+			user => user !== username
+		  );
+
+		  if (filtered.length > 0) {
+			setUpdates[`reactions.${reaction}`] = filtered;
+		  } else {
+			unsetUpdates[`reactions.${reaction}`] = "";
+		  }
+
+		  const updateOps = {};
+		  if (Object.keys(setUpdates).length > 0) updateOps.$set = setUpdates;
+		  if (Object.keys(unsetUpdates).length > 0) updateOps.$unset = unsetUpdates;
+
+		  if (Object.keys(updateOps).length > 0) {
+			await Message.updateOne({ id: msgId }, updateOps);
+		  }
+
+		  const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
+
+		  return io.emit('message reaction', {
+			msgId,
+			reactions: updatedMsg.reactions || {}
+		  });
+		}
+
+		// ✅ Remove user from all other reactions
+		for (let emoji in msg.reactions) {
+		  if (msg.reactions[emoji].includes(username)) {
+
+			const filtered = msg.reactions[emoji].filter(
+			  user => user !== username
+			);
+
+			if (filtered.length > 0) {
+			  setUpdates[`reactions.${emoji}`] = filtered;
+			} else {
+			  unsetUpdates[`reactions.${emoji}`] = "";
+			}
+		  }
+		}
+
+		const updateOps = {};
+		if (Object.keys(setUpdates).length > 0) updateOps.$set = setUpdates;
+		if (Object.keys(unsetUpdates).length > 0) updateOps.$unset = unsetUpdates;
+
+		if (Object.keys(updateOps).length > 0) {
+		  await Message.updateOne({ id: msgId }, updateOps);
+		}
+
+		// ✅ Add new reaction
+		await Message.updateOne(
+		  { id: msgId },
+		  {
+			$addToSet: {
+			  [`reactions.${reaction}`]: username
+			}
+		  }
+		);
+
+		// ✅ Emit updated reactions
+		const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
+
+		io.emit('message reaction', {
+		  msgId,
+		  reactions: updatedMsg.reactions || {}
+		});
+
+	  } catch (err) {
+		console.error("REACTION ERROR:", err);
+	  }
+	});
+	
+  // =====================
+  // ⌨️ TYPING
+  // =====================
+  socket.on("typing", () => {
+    if (!socket.username) return;
+    socket.broadcast.emit("typing", { username: socket.username });
+  });
+
+  socket.on("stop typing", () => {
+    if (!socket.username) return;
+    socket.broadcast.emit("stop typing", { username: socket.username });
+  });
+
+  // =====================
   // 🚪 DISCONNECT
   // =====================
   socket.on('disconnect', async () => {
-    onlineUsers = Math.max(onlineUsers - 1, 0);
+    try {
+      onlineUsers = Math.max(onlineUsers - 1, 0);
 
-    if (socket.username) {
-      const leaveMsg = {
-        id: Date.now() + "_" + Math.random(),
-        username: "System",
-        role: "system",
-        type: "user-left",
-        content: socket.username + " left the chat",
-        timestamp: new Date(),
-        online: onlineUsers,
-        reactions: {}
-      };
+      if (socket.username) {
+        const leaveMsg = {
+          id: Date.now() + "_" + Math.random(),
+          username: "System",
+          role: "system",
+          type: "user-left",
+          content: socket.username + " left the chat",
+          timestamp: new Date(),
+          online: onlineUsers,
+          reactions: {}
+        };
 
-      io.emit('chat message', leaveMsg);
+      //  await Message.create(leaveMsg);
+      //  await trimMessages();
 
-      // 🔥 Add to newsfeed
-      addNews(socket.username + " left the community", "update");
+        io.emit('chat message', leaveMsg);
+      }
+
+    } catch (err) {
+      console.error("DISCONNECT ERROR:", err);
     }
   });
 
-});
-
-// =====================
-// 🌐 ROUTES (OPTIONAL)
-// =====================
-app.get('/announcements', async (req, res) => {
-  const posts = await Announcement.find().sort({ createdAt: -1 });
-  res.json(posts);
-});
-
-app.get('/news', async (req, res) => {
-  const news = await News.find().sort({ createdAt: -1 });
-  res.json(news);
 });
 
 // =====================
