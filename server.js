@@ -28,12 +28,14 @@ mongoose.connect(MONGO_URI)
 // =====================
 // 📦 MESSAGE SCHEMA
 // =====================
+
 const messageSchema = new mongoose.Schema({
   id: String,
   username: String,
-  role: String,
-  type: String,
+  role: String, // "member", "admin", "moderator", etc.
+  type: String, // 🔥 "chat", "announcement", "news", "system", etc.
   content: String,
+  title: String, // ✅ for announcements/news
   replyTo: String,
   timestamp: Date,
   edited: Boolean,
@@ -44,27 +46,6 @@ const messageSchema = new mongoose.Schema({
 
 const Message = mongoose.model('Message', messageSchema);
 
-// =====================
-// 📢 ANNOUNCEMENT SCHEMA
-// =====================
-const announcementSchema = new mongoose.Schema({
-  title: String,
-  content: String,
-  createdAt: { type: Date, default: Date.now }
-});
-
-const Announcement = mongoose.model('Announcement', announcementSchema);
-
-// =====================
-// 📰 NEWS SCHEMA
-// =====================
-const newsSchema = new mongoose.Schema({
-  message: String,
-  type: String,
-  createdAt: { type: Date, default: Date.now }
-});
-
-const News = mongoose.model('News', newsSchema);
 
 // =====================
 // ⚙️ CONFIG
@@ -88,11 +69,19 @@ async function trimMessages() {
 // =====================
 // 📰 ADD NEWS HELPER
 // =====================
-async function addNews(message, type = "system") {
-  const newsItem = await News.create({ message, type });
-  io.emit('news update', newsItem);
-}
+ async function addNews(message) {
+  const newsItem = await Message.create({
+    id: Date.now() + "_" + Math.random(),
+    username: "Smart2z",
+    role: "system",
+    type: "news",
+    content: message,
+    timestamp: new Date(),
+    reactions: {}
+  });
 
+  io.emit('news update', newsItem);
+ }
 
 
 // =====================
@@ -111,9 +100,9 @@ io.on('connection', (socket) => {
       onlineUsers++;
 
       // Load chat history
-      const history = await Message.find()
-        .sort({ timestamp: 1 })
-        .limit(MAX_MESSAGES);
+     const history = await Message.find({type: { $in: ["chat", "system"] }})
+		.sort({ timestamp: 1 })
+		.limit(MAX_MESSAGES);
 
       socket.emit('chat history', history);
 
@@ -121,7 +110,7 @@ io.on('connection', (socket) => {
         id: Date.now() + "_" + Math.random(),
         username: socket.username,
         role: "system",
-        type: "user-join",
+        type: "Connected",
         content: socket.username + " joined the chat",
         timestamp: new Date(),
         online: onlineUsers,
@@ -186,29 +175,47 @@ io.on('connection', (socket) => {
   // =====================
   // 📢 GET ANNOUNCEMENTS
   // =====================
-  socket.on('get announcements', async () => {
-    const posts = await Announcement.find().sort({ createdAt: -1 }).limit(50);
-    socket.emit('announcements', posts);
-  });
+ socket.on('get announcements', async () => {
+  const posts = await Message.find({ type: "announcement" })
+    .sort({ timestamp: -1 })
+    .limit(50);
+
+  socket.emit('announcements', posts);
+ });
 
   // =====================
   // 📰 GET NEWS
   // =====================
   socket.on('get news', async () => {
-    const news = await News.find().sort({ createdAt: -1 }).limit(50);
-    socket.emit('news', news);
-  });
+  const news = await Message.find({ type: "news" })
+    .sort({ timestamp: -1 })
+    .limit(50);
+
+  socket.emit('news', news);
+ });
 
   // =====================
   // 📢 CREATE ANNOUNCEMENT (ADMIN ONLY)
   // =====================
   socket.on('create announcement', async ({ title, content }) => {
-    if (socket.role !== "Admin") return;
+   if (socket.role !== "Admin") return;
 
-    const newPost = await Announcement.create({ title, content });
-    io.emit('new announcement', newPost);
-  });
-  
+	  const msg = {
+		id: Date.now() + "_" + Math.random(),
+		username: socket.username,
+		role: "Admin",
+		type: "announcement",
+		title,
+		content,
+		timestamp: new Date(),
+		edited: false,
+		reactions: {}
+	  };
+
+  await Message.create(msg);
+
+  io.emit('new announcement', msg);
+ });
 
   // =====================
   // ❌ DELETE MESSAGE
@@ -393,9 +400,9 @@ io.on('connection', (socket) => {
       if (socket.username) {
         const leaveMsg = {
           id: Date.now() + "_" + Math.random(),
-          username: "System",
+          username: "Smart2z",
           role: "system",
-          type: "user-left",
+          type: "disconnected",
           content: socket.username + " left the chat",
           timestamp: new Date(),
           online: onlineUsers,
