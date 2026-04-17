@@ -110,7 +110,7 @@ io.on('connection', (socket) => {
         id: Date.now() + "_" + Math.random(),
         username: socket.username,
         role: "system",
-        type: "Connected",
+        type: "connected",
         content: socket.username + " joined the chat",
         timestamp: new Date(),
         online: onlineUsers,
