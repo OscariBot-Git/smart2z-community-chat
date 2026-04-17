@@ -123,7 +123,7 @@ io.on('connection', (socket) => {
       io.emit('chat message', joinMsg);
 	  
 	   // 🔥 Add to newsfeed
-      addNews(socket.username + " joined the community", "update");
+    //  addNews(socket.username + " joined the community", "update");
 
 
     } catch (err) {
