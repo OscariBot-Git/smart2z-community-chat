@@ -177,7 +177,7 @@ io.on('connection', (socket) => {
   // =====================
  socket.on('get announcements', async () => {
   const posts = await Message.find({ type: "announcement" })
-    .sort({ timestamp: -1 })
+    .sort({ timestamp: 1 })
     .limit(50);
 
   socket.emit('announcements', posts);
@@ -188,7 +188,7 @@ io.on('connection', (socket) => {
   // =====================
   socket.on('get news', async () => {
   const news = await Message.find({ type: "news" })
-    .sort({ timestamp: -1 })
+    .sort({ timestamp: 1 })
     .limit(50);
 
   socket.emit('news', news);
