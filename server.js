@@ -66,22 +66,7 @@ async function trimMessages() {
   }
 }
 
-// =====================
-// 📰 ADD NEWS HELPER
-// =====================
- async function addNews(message) {
-  const newsItem = await Message.create({
-    id: Date.now() + "_" + Math.random(),
-    username: "Smart2z",
-    role: "system",
-    type: "news",
-    content: message,
-    timestamp: new Date(),
-    reactions: {}
-  });
 
-  io.emit('news update', newsItem);
- }
 
 
 // =====================
@@ -179,7 +164,6 @@ io.on('connection', (socket) => {
   const posts = await Message.find({ type: "announcement" })
     .sort({ timestamp: 1 })
     .limit(50);
-
   socket.emit('announcements', posts);
  });
 
@@ -190,7 +174,6 @@ io.on('connection', (socket) => {
   const news = await Message.find({ type: "news" })
     .sort({ timestamp: 1 })
     .limit(50);
-
   socket.emit('news', news);
  });
 
@@ -216,6 +199,31 @@ io.on('connection', (socket) => {
 
   io.emit('new announcement', msg);
  });
+ 
+ // =====================
+ // 📰 CREATE NEWS (ADMIN ONLY)
+ // =====================
+  socket.on('create news', async ({ title, content }) => {
+   if (socket.role !== "Admin") return;
+
+	  const msg = {
+		id: Date.now() + "_" + Math.random(),
+		username: socket.username,
+		role: "Admin",
+		type: "news",
+		title,
+		content,
+		timestamp: new Date(),
+		edited: false,
+		reactions: {}
+	  };
+
+  await Message.create(msg);
+
+   io.emit('news update', newsItem);
+ });
+
+ 
 
   // =====================
   // ❌ DELETE MESSAGE
