@@ -67,6 +67,24 @@ async function trimMessages() {
 }
 
 // =====================
+// 📰 ADD NEWS HELPER
+// =====================
+ async function addNews(message) {
+  const newsItem = await Message.create({
+    id: Date.now() + "_" + Math.random(),
+    username: "Smart2z",
+    role: "system",
+    type: "news",
+    content: message,
+    timestamp: new Date(),
+    reactions: {}
+  });
+
+  io.emit('news update', newsItem);
+ }
+
+
+// =====================
 // 🔌 SOCKET CONNECTION
 // =====================
 io.on('connection', (socket) => {
@@ -113,8 +131,6 @@ io.on('connection', (socket) => {
     }
   });
 
-
-
   // =====================
   // 💬 SEND MESSAGE
   // =====================
@@ -156,19 +172,6 @@ io.on('connection', (socket) => {
     }
   });
 
-
-
-  // =====================
-  // 📢 GET CHATS
-  // =====================
- socket.on('get chat', async () => {
-  const history = await Message.find({type: { $in: ["chat", "system"] }})
-	.sort({ timestamp: 1 })
-    .limit(MAX_MESSAGES);
-
-  socket.emit('chat history', history);
- });
-
   // =====================
   // 📢 GET ANNOUNCEMENTS
   // =====================
@@ -206,7 +209,6 @@ io.on('connection', (socket) => {
 		content,
 		timestamp: new Date(),
 		edited: false,
-		online: onlineUsers,
 		reactions: {}
 	  };
 
@@ -214,25 +216,6 @@ io.on('connection', (socket) => {
 
   io.emit('new announcement', msg);
  });
- 
-// =====================
-// 📰 ADD NEWS HELPER
-// =====================
- async function addNews(message) {
-  const newsItem = await Message.create({
-    id: Date.now() + "_" + Math.random(),
-    username: "Smart2z",
-    role: "smart2z",
-    type: "news",
-    content: message,
-    timestamp: new Date(),
-	online: onlineUsers,
-    reactions: {}
-  });
-
-  io.emit('news update', newsItem);
- }
-
 
   // =====================
   // ❌ DELETE MESSAGE
