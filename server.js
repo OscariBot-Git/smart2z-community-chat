@@ -157,6 +157,18 @@ io.on('connection', (socket) => {
     }
   });
 
+
+   // =====================
+  // 📢 GET CHAT
+  // =====================
+  socket.on('get chat', async () => {
+     const history = await Message.find({type: { $in: ["chat", "system"] }})
+		.sort({ timestamp: 1 })
+		.limit(50);
+	  socket.emit('chat history', history);
+	 });
+
+
   // =====================
   // 📢 GET ANNOUNCEMENTS
   // =====================
