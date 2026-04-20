@@ -131,6 +131,8 @@ io.on('connection', (socket) => {
     }
   });
 
+
+
   // =====================
   // 💬 SEND MESSAGE
   // =====================
@@ -171,6 +173,21 @@ io.on('connection', (socket) => {
       console.error("SEND ERROR:", err);
     }
   });
+
+
+
+  // =====================
+  // 📢 GET CHATS
+  // =====================
+ socket.on('get chat', async () => {
+  const history = await Message.find({type: { $in: ["chat", "system"] }})
+	.sort({ timestamp: 1 })
+    .limit(MAX_MESSAGES);
+
+  socket.emit('chat history', history);
+ });
+
+
 
   // =====================
   // 📢 GET ANNOUNCEMENTS
