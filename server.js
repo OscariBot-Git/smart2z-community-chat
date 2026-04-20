@@ -164,7 +164,7 @@ io.on('connection', (socket) => {
   socket.on('get chat', async () => {
      const history = await Message.find({type: { $in: ["chat", "system"] }})
 		.sort({ timestamp: 1 })
-		.limit(50);
+		.limit(MAX_MESSAGES);
 	  socket.emit('chat history', history);
 	 });
 
@@ -175,7 +175,7 @@ io.on('connection', (socket) => {
  socket.on('get announcements', async () => {
   const posts = await Message.find({ type: "announcement" })
     .sort({ timestamp: 1 })
-    .limit(50);
+    .limit(MAX_MESSAGES);
   socket.emit('announcements', posts);
  });
 
@@ -185,7 +185,7 @@ io.on('connection', (socket) => {
   socket.on('get news', async () => {
   const news = await Message.find({ type: "news" })
     .sort({ timestamp: 1 })
-    .limit(50);
+    .limit(MAX_MESSAGES);
   socket.emit('news', news);
  });
 
@@ -194,7 +194,6 @@ io.on('connection', (socket) => {
   // =====================
   socket.on('create announcement', async ({ title, content }) => {
    if (socket.role !== "Admin") return;
-
 	  const msg = {
 		id: Date.now() + "_" + Math.random(),
 		username: socket.username,
@@ -217,7 +216,6 @@ io.on('connection', (socket) => {
  // =====================
   socket.on('create news', async ({ title, content }) => {
    if (socket.role !== "Admin") return;
-
 	  const msg = {
 		id: Date.now() + "_" + Math.random(),
 		username: socket.username,
