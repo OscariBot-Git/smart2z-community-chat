@@ -220,7 +220,7 @@ io.on('connection', (socket) => {
 
   await Message.create(msg);
 
-   io.emit('news update', newsItem);
+   io.emit('news update', msg);
  });
 
  
