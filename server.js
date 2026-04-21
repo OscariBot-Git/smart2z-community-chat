@@ -60,7 +60,7 @@ function getLimitByType(type) {
   const limits = {
     chat: 10,
     announcement: 5,
-    news: 5
+    news: 5 
   };
 
   return limits[type] || 100;
