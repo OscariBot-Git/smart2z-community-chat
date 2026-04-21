@@ -56,12 +56,15 @@ const Message = mongoose.model('Message', messageSchema);
 // ⚙️ CONFIG
 // =====================
 let onlineUsers = 0;
+let chatlimit = 300;
+let postlimit = 50;
+let newslimit = 50;
 
 function getLimitByType(type) {
   const limits = {
-    chat: 10,
-    announcement: 5,
-    news: 5 
+    chat: chatlimit,
+    announcement: postlimit,
+    news: newslimit
   };
 
   return limits[type] || 100;
@@ -194,7 +197,7 @@ io.on('connection', (socket) => {
   socket.on('get chat', async () => {
      const history = await Message.find({type: "chat" })
 		.sort({ timestamp: 1 })
-		.limit(5);
+		.limit(chatlimit);
 	  socket.emit('chat history', history);
 	 });
 
@@ -206,7 +209,7 @@ io.on('connection', (socket) => {
  socket.on('get announcements', async () => {
   const posts = await Message.find({ type: "announcement" })
     .sort({ timestamp: 1 })
-    .limit(5);
+    .limit(postlimit);
   socket.emit('announcements', posts);
  });
 
@@ -216,7 +219,7 @@ io.on('connection', (socket) => {
   socket.on('get news', async () => {
   const news = await Message.find({ type: "news" })
     .sort({ timestamp: 1 })
-    .limit(5);
+    .limit(newslimit);
   socket.emit('news', news);
  });
 
