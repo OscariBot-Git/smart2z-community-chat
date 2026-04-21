@@ -21,19 +21,15 @@ console.log("MONGO_URI:", process.env.MONGO_URI);
 // =====================
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart2z_chat';
 
+
+
 mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-   await Message.syncIndexes();
-  .catch(err => console.error("❌ MongoDB error:", err));
-
-
-/* mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log("✅ MongoDB connected");
-    await Message.syncIndexes(); // ✅ HERE
+ //   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
- */
+
 
 
 // =====================
