@@ -20,16 +20,20 @@ console.log("MONGO_URI:", process.env.MONGO_URI);
 // 🔗 MONGODB CONNECTION
 // =====================
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart2z_chat';
-
 mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
+  .then(async () => {
+    console.log("✅ MongoDB connected");
+    await Message.syncIndexes(); // ✅ HERE
+  })
   .catch(err => console.error("❌ MongoDB error:", err));
+
 
 // =====================
 // 📦 MESSAGE SCHEMA
 // =====================
 
 const messageSchema = new mongoose.Schema({
+  id: String,
   username: String,
   role: String, // "member", "admin", "moderator", etc.
   type: String, // 🔥 "chat", "announcement", "news", "system", etc.
@@ -46,9 +50,6 @@ const messageSchema = new mongoose.Schema({
 messageSchema.index({ type: 1, timestamp: -1 });
 
 const Message = mongoose.model('Message', messageSchema);
-
-await Message.syncIndexes();
-
 
 
 // =====================
@@ -91,8 +92,7 @@ setInterval(async () => {
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-   // console.log("Trim cycle completed");
-	io.emit('chat message', "Trim cycle completed");
+    console.log("Trim cycle completed");
   } catch (err) {
     console.error("Trim cycle error:", err);
   }
@@ -119,7 +119,7 @@ io.on('connection', (socket) => {
       // Load chat history
      const history = await Message.find()
 		.sort({ timestamp: 1 })
-		.limit(MAX_MESSAGES);
+		.limit(50);
 
       socket.emit('chat history', history);
 
@@ -192,20 +192,21 @@ io.on('connection', (socket) => {
   // 📢 GET CHAT
   // =====================
   socket.on('get chat', async () => {
-     const history = await Message.find({type: {"chat" })
+     const history = await Message.find({type: "chat" })
 		.sort({ timestamp: 1 })
-		.limit(MAX_MESSAGES);
+		.limit(5);
 	  socket.emit('chat history', history);
 	 });
 
-
+    
+  
   // =====================
   // 📢 GET ANNOUNCEMENTS
   // =====================
  socket.on('get announcements', async () => {
   const posts = await Message.find({ type: "announcement" })
     .sort({ timestamp: 1 })
-    .limit(MAX_MESSAGES);
+    .limit(5);
   socket.emit('announcements', posts);
  });
 
@@ -215,7 +216,7 @@ io.on('connection', (socket) => {
   socket.on('get news', async () => {
   const news = await Message.find({ type: "news" })
     .sort({ timestamp: 1 })
-    .limit(MAX_MESSAGES);
+    .limit(5);
   socket.emit('news', news);
  });
 
