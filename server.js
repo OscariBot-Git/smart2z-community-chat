@@ -58,9 +58,9 @@ let onlineUsers = 0;
 
 function getLimitByType(type) {
   const limits = {
-    chat: 300,
-    announcement: 50,
-    news: 50
+    chat: 10,
+    announcement: 5,
+    news: 5
   };
 
   return limits[type] || 100;
@@ -91,7 +91,8 @@ setInterval(async () => {
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-  //  console.log("Trim cycle completed");
+   // console.log("Trim cycle completed");
+	io.emit('chat message', "Trim cycle completed");
   } catch (err) {
     console.error("Trim cycle error:", err);
   }
