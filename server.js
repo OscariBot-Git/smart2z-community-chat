@@ -85,7 +85,7 @@ io.on('connection', (socket) => {
       onlineUsers++;
 
       // Load chat history
-     const history = await Message.find({type: { $in: ["chat", "system"] }})
+     const history = await Message.find({type: { $in: ["chat", "delete"] }})
 		.sort({ timestamp: 1 })
 		.limit(MAX_MESSAGES);
 
