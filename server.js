@@ -30,7 +30,6 @@ mongoose.connect(MONGO_URI)
 // =====================
 
 const messageSchema = new mongoose.Schema({
-  id: String,
   username: String,
   role: String, // "member", "admin", "moderator", etc.
   type: String, // 🔥 "chat", "announcement", "news", "system", etc.
@@ -44,27 +43,59 @@ const messageSchema = new mongoose.Schema({
   online: Number
 });
 
+messageSchema.index({ type: 1, timestamp: -1 });
+
 const Message = mongoose.model('Message', messageSchema);
+
+await Message.syncIndexes();
+
 
 
 // =====================
 // ⚙️ CONFIG
 // =====================
 let onlineUsers = 0;
-const MAX_MESSAGES = 500;
+
+function getLimitByType(type) {
+  const limits = {
+    chat: 300,
+    announcement: 50,
+    news: 50
+  };
+
+  return limits[type] || 100;
+}
+
 
 // =====================
-// 🧹 AUTO CLEAN OLD MESSAGES
+// 🧹 CLEAN OLD MESSAGES 
 // =====================
-async function trimMessages() {
-  const count = await Message.countDocuments();
-  if (count > MAX_MESSAGES) {
-    const excess = count - MAX_MESSAGES;
-    const old = await Message.find().sort({ timestamp: 1 }).limit(excess);
-    const ids = old.map(m => m._id);
-    await Message.deleteMany({ _id: { $in: ids } });
-  }
+async function trimByType(type, limit) {
+  const old = await Message.find({ type })
+    .sort({ timestamp: -1 }) // newest first
+    .skip(limit)
+    .select('_id');
+
+  if (!old.length) return;
+
+  const ids = old.map(m => m._id);
+  await Message.deleteMany({ _id: { $in: ids } });
 }
+
+// =====================
+// 🧹 AUTO CLEAN SCHEDULER
+// =====================
+const TYPES = ["chat", "announcement", "news"];
+setInterval(async () => {
+  try {
+    for (const type of TYPES) {
+      await trimByType(type, getLimitByType(type));
+    }
+  //  console.log("Trim cycle completed");
+  } catch (err) {
+    console.error("Trim cycle error:", err);
+  }
+}, 60000); // 60 seconds
 
 
 
@@ -85,7 +116,7 @@ io.on('connection', (socket) => {
       onlineUsers++;
 
       // Load chat history
-     const history = await Message.find({type: { $in: ["chat", "delete"] }})
+     const history = await Message.find()
 		.sort({ timestamp: 1 })
 		.limit(MAX_MESSAGES);
 
@@ -103,7 +134,6 @@ io.on('connection', (socket) => {
       };
 
     //  await Message.create(joinMsg);
-    //  await trimMessages();
 
       io.emit('chat message', joinMsg);
 	  
@@ -148,8 +178,7 @@ io.on('connection', (socket) => {
       };
 
       await Message.create(msg);
-      await trimMessages();
-
+	  
       io.emit('chat message', msg);
 
     } catch (err) {
@@ -162,7 +191,7 @@ io.on('connection', (socket) => {
   // 📢 GET CHAT
   // =====================
   socket.on('get chat', async () => {
-     const history = await Message.find({type: { $in: ["chat", "system"] }})
+     const history = await Message.find({type: {"chat" })
 		.sort({ timestamp: 1 })
 		.limit(MAX_MESSAGES);
 	  socket.emit('chat history', history);
@@ -253,7 +282,7 @@ io.on('connection', (socket) => {
             content: newContent,
             deleted: true,
             role: "system",
-            type: "delete",
+            type: "chat",
             online: onlineUsers
           }
         );
@@ -428,7 +457,6 @@ io.on('connection', (socket) => {
         };
 
       //  await Message.create(leaveMsg);
-      //  await trimMessages();
 
         io.emit('chat message', leaveMsg);
       }
