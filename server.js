@@ -122,7 +122,7 @@ io.on('connection', (socket) => {
       // Load chat history
      const history = await Message.find()
 		.sort({ timestamp: 1 })
-		.limit(50);
+		.limit(chatlimit);
 
       socket.emit('chat history', history);
 
