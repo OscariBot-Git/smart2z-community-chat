@@ -140,13 +140,7 @@ io.on('connection', (socket) => {
       };
 
     //  await Message.create(joinMsg);
-
       io.emit('chat message', joinMsg);
-	  
-	   // 🔥 Add to newsfeed
-    //  addNews(socket.username + " joined the community", "update");
-
-
     } catch (err) {
       console.error("JOIN ERROR:", err);
     }
