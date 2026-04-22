@@ -20,12 +20,10 @@ console.log("MONGO_URI:", process.env.MONGO_URI);
 // 🔗 MONGODB CONNECTION
 // =====================
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart2z_chat';
-
-
-
 mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log("✅ MongoDB connected");
+	trimByType(type, getLimitByType(type));
  //   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
@@ -52,7 +50,6 @@ const messageSchema = new mongoose.Schema({
 });
 
 messageSchema.index({ type: 1, timestamp: -1 });
-
 const Message = mongoose.model('Message', messageSchema);
 
 
@@ -71,7 +68,7 @@ function getLimitByType(type) {
     news: newslimit
   };
 
-  return limits[type] || 100;
+  return limits[type] ?? 100;
 }
 
 
@@ -90,6 +87,7 @@ async function trimByType(type, limit) {
   await Message.deleteMany({ _id: { $in: ids } });
 }
 
+
 // =====================
 // 🧹 AUTO CLEAN SCHEDULER
 // =====================
@@ -103,7 +101,7 @@ setInterval(async () => {
   } catch (err) {
     console.error("Trim cycle error:", err);
   }
-}, 60000); // 60 seconds
+}, 20 * 60 * 1000); // 20 minutes
 
 
 
