@@ -24,7 +24,7 @@ mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log("✅ MongoDB connected");
 	trimByType(type, getLimitByType(type));
- //   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+    await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
@@ -37,16 +37,17 @@ mongoose.connect(MONGO_URI)
 const messageSchema = new mongoose.Schema({
   id: String,
   username: String,
-  role: String, // "member", "admin", "moderator", etc.
-  type: String, // 🔥 "chat", "announcement", "news", "system", etc.
+  role: String,
+  type: String,
   content: String,
-  title: String, // ✅ for announcements/news
+  title: String,
   replyTo: String,
-  timestamp: Date,
-  edited: Boolean,
-  deleted: Boolean,
-  reactions: Object,
-  online: Number
+  timestamp: { type: Date, default: Date.now },
+  edited: { type: Boolean, default: false },
+  deleted: { type: Boolean, default: false },
+  reactions: { type: Object, default: {} },
+  avatar: { type: String, required: true },
+  online: { type: Number, default: 0 }
 });
 
 messageSchema.index({ type: 1, timestamp: -1 });
@@ -57,9 +58,9 @@ const Message = mongoose.model('Message', messageSchema);
 // ⚙️ CONFIG
 // =====================
 let onlineUsers = 0;
-let chatlimit = 300;
-let postlimit = 50;
-let newslimit = 50;
+let chatlimit = 0;
+let postlimit = 0;
+let newslimit = 0;
 
 function getLimitByType(type) {
   const limits = {
