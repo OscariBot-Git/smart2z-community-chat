@@ -128,15 +128,17 @@ io.on('connection', (socket) => {
     try {
       socket.username = username || "Guest";
       socket.role = role || "member";
-
       onlineUsers++;
-
-      // Load chat history
-     const history = await Message.find()
+	  
+	  // get avatars
+	  const users = await User.find({}, "username avatar");
+	  socket.emit("users list", users);
+	  
+	   // Load chat history
+	  /* const history = await Message.find()
 		.sort({ timestamp: 1 })
 		.limit(400);
-
-      socket.emit('chat history', history);
+      socket.emit('chat history', history); */
 
       const joinMsg = {
         id: Date.now() + "_" + Math.random(),
@@ -155,6 +157,19 @@ io.on('connection', (socket) => {
       console.error("JOIN ERROR:", err);
     }
   });
+  
+  
+  // =====================
+  //GET CHAT HISTORY
+  // =====================
+  socket.on("get history", async () => {
+     const history = await Message.find()
+		.sort({ timestamp: 1 })
+		.limit(400);
+      socket.emit('chat history', history);
+   });
+
+  
 
   // =====================
   // 💬 SEND MESSAGE
@@ -458,7 +473,8 @@ io.on('connection', (socket) => {
 	});
 
 
-  // =====================
+
+  /* // =====================
   // 🚪 GET AVATAR
   // =====================
 	socket.on("get users", async () => {
@@ -466,7 +482,7 @@ io.on('connection', (socket) => {
 	  socket.emit("users list", users);
 	});
 
-
+ */
 
   // =====================
   // 🚪 DISCONNECT
