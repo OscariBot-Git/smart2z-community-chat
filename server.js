@@ -53,17 +53,6 @@ messageSchema.index({ type: 1, timestamp: -1 });
 const Message = mongoose.model('Message', messageSchema);
 
 
-
-// =====================
-// AVATAR SCHEMA
-// =====================
-const userSchema = new mongoose.Schema({
-  username: { type: String, unique: true, required: true },
-  avatar: {type: String, default: "" }
-});
-
-
-
 // =====================
 // ⚙️ CONFIG
 // =====================
@@ -448,26 +437,6 @@ io.on('connection', (socket) => {
     if (!socket.username) return;
     socket.broadcast.emit("stop typing", { username: socket.username });
   });
-
-
-  // =====================
-  // 🚪 UPDATE AVATAR
-  // =====================
-	socket.on("save avatar", async ({ username, avatar }) => {
-	  await User.updateOne({ username }, { $set: { avatar } });
-	  io.emit("avatar updated", { username, avatar });
-	});
-
-
-  // =====================
-  // 🚪 GET AVATAR
-  // =====================
-	socket.on("get users", async () => {
-	  const users = await User.find({}, "username avatar");
-	  socket.emit("users list", users);
-	});
-
-
 
   // =====================
   // 🚪 DISCONNECT
