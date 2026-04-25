@@ -101,7 +101,7 @@ async function trimByType(type, limit) {
   await Message.deleteMany({ _id: { $in: ids } });
 }
 
-
+  
 // =====================
 // 🧹 AUTO CLEAN SCHEDULER
 // =====================
@@ -204,8 +204,13 @@ io.on('connection', (socket) => {
   // =====================
   // 🚪 UPDATE AVATAR
   // =====================
+	
 	socket.on("save avatar", async ({ username, avatar }) => {
-	  await Message.updateOne({ username }, { $set: { avatar } });
+	  await Message.updateMany(
+		  { username, avatar: { $ne: avatar } },
+		  { $set: { avatar } }
+		);
+
 	  io.emit("avatar updated", { username, avatar });
 	});
 
