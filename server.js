@@ -23,11 +23,11 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart2z_ch
 mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log("✅ MongoDB connected");
-	// 🔥 run once at startup
+	// 🔥 clean old messages once at startup
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+  // await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
