@@ -133,6 +133,13 @@ io.on('connection', (socket) => {
       socket.role = role || "member";
       onlineUsers++;
 	  
+	  // Add new user to the avatar achive
+	  await User.findOneAndUpdate(
+			{ username },
+			{ $setOnInsert: { username, avatar: "" } },
+			{ upsert: true, new: true }
+		  );	  
+	  
 	 // get avatars + messages together
 		const users = await User.find({}, "username avatar");
 		const history = await Message.find()
@@ -203,6 +210,17 @@ io.on('connection', (socket) => {
       console.error("SEND ERROR:", err);
     }
   });
+
+
+
+  // =====================
+  // 🚪 UPDATE AVATAR
+  // =====================
+	socket.on("save avatar", async ({ username, avatar }) => {
+	  await User.updateOne({ username }, { $set: { avatar } });
+	  io.emit("avatar updated", { username, avatar });
+	});
+
 
 
    // =====================
@@ -457,39 +475,6 @@ io.on('connection', (socket) => {
   });
 
 
-  // =====================
-  // 🚪 UPDATE AVATAR
-  // =====================
-	socket.on("save avatar", async ({ username, avatar }) => {
-	  await User.updateOne({ username }, { $set: { avatar } });
-	  io.emit("avatar updated", { username, avatar });
-	});
-
-
-
-  /* 
-  
-   // =====================
-  //GET CHAT HISTORY
-  // =====================
-  socket.on("get history", async () => {
-     const history = await Message.find()
-		.sort({ timestamp: 1 })
-		.limit(400);
-      socket.emit('chat history', history);
-   });
-
- 
-  
-  // =====================
-  // 🚪 GET AVATAR
-  // =====================
-	socket.on("get users", async () => {
-	  const users = await User.find({}, "username avatar");
-	  socket.emit("users list", users);
-	});
-
- */
 
   // =====================
   // 🚪 DISCONNECT
