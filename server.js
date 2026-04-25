@@ -27,7 +27,7 @@ mongoose.connect(MONGO_URI)
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-  // await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
@@ -56,16 +56,7 @@ const messageSchema = new mongoose.Schema({
 messageSchema.index({ type: 1, timestamp: -1 });
 const Message = mongoose.model('Message', messageSchema);
 
-/* 
-// =====================
-// AVATAR SCHEMA
-// =====================
-const userSchema = new mongoose.Schema({
-  username: { type: String, unique: true, required: true },
-  avatar: {type: String, default: "" }
-});
 
-const User = mongoose.model('User', userSchema); */
 
 // =====================
 // ⚙️ CONFIG
