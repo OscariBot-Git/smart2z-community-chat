@@ -27,7 +27,7 @@ mongoose.connect(MONGO_URI)
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+  // await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
