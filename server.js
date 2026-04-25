@@ -24,7 +24,7 @@ mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log("✅ MongoDB connected");
 	trimByType(type, getLimitByType(type));
- //   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
@@ -130,15 +130,16 @@ io.on('connection', (socket) => {
       socket.role = role || "member";
       onlineUsers++;
 	  
-	  // get avatars
-	  const users = await User.find({}, "username avatar");
-	  socket.emit("users list", users);
-	  
-	   // Load chat history
-	  /* const history = await Message.find()
-		.sort({ timestamp: 1 })
-		.limit(400);
-      socket.emit('chat history', history); */
+	 // get avatars + messages together
+		const users = await User.find({}, "username avatar");
+		const history = await Message.find()
+		  .sort({ timestamp: 1 })
+		  .limit(400);
+		  
+		socket.emit('initial data', {
+		  users,
+		  messages: history
+		});
 
       const joinMsg = {
         id: Date.now() + "_" + Math.random(),
@@ -151,24 +152,13 @@ io.on('connection', (socket) => {
         reactions: {}
       };
 
-    //  await Message.create(joinMsg);
-      io.emit('chat message', joinMsg);
+     // notify others users
+      socket.broadcast.emit('chat message', joinMsg);
     } catch (err) {
       console.error("JOIN ERROR:", err);
     }
   });
   
-  
-  // =====================
-  //GET CHAT HISTORY
-  // =====================
-  socket.on("get history", async () => {
-     const history = await Message.find()
-		.sort({ timestamp: 1 })
-		.limit(400);
-      socket.emit('chat history', history);
-   });
-
   
 
   // =====================
@@ -474,7 +464,21 @@ io.on('connection', (socket) => {
 
 
 
-  /* // =====================
+  /* 
+  
+   // =====================
+  //GET CHAT HISTORY
+  // =====================
+  socket.on("get history", async () => {
+     const history = await Message.find()
+		.sort({ timestamp: 1 })
+		.limit(400);
+      socket.emit('chat history', history);
+   });
+
+ 
+  
+  // =====================
   // 🚪 GET AVATAR
   // =====================
 	socket.on("get users", async () => {
