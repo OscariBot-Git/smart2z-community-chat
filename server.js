@@ -49,13 +49,14 @@ const messageSchema = new mongoose.Schema({
   edited: Boolean,
   deleted: Boolean,
   reactions: Object,
-  online: Number
+  online: Number,
+  avatar: String
 });
 
 messageSchema.index({ type: 1, timestamp: -1 });
 const Message = mongoose.model('Message', messageSchema);
 
-
+/* 
 // =====================
 // AVATAR SCHEMA
 // =====================
@@ -64,7 +65,7 @@ const userSchema = new mongoose.Schema({
   avatar: {type: String, default: "" }
 });
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.model('User', userSchema); */
 
 // =====================
 // ⚙️ CONFIG
@@ -133,16 +134,11 @@ io.on('connection', (socket) => {
       socket.role = role || "member";
       onlineUsers++;
 	  
-	 // get avatars + messages together
-		const users = await User.find({}, "username avatar");
-		const history = await Message.find()
-		  .sort({ timestamp: 1 })
-		  .limit(400);
-		  
-		socket.emit('initial data', {
-		  users,
-		  messages: history
-		});
+	 // Load chat history
+     const history = await Message.find({type: { $in: ["chat", "delete"] }})
+		.sort({ timestamp: 1 })
+		.limit(MAX_MESSAGES);
+      socket.emit('chat history', history);
 
       const joinMsg = {
         id: Date.now() + "_" + Math.random(),
@@ -203,6 +199,16 @@ io.on('connection', (socket) => {
       console.error("SEND ERROR:", err);
     }
   });
+  
+  
+  // =====================
+  // 🚪 UPDATE AVATAR
+  // =====================
+	socket.on("save avatar", async ({ username, avatar }) => {
+	  await Message.updateOne({ username }, { $set: { avatar } });
+	  io.emit("avatar updated", { username, avatar });
+	});
+
 
 
    // =====================
@@ -457,54 +463,7 @@ io.on('connection', (socket) => {
   });
 
 
-  // =====================
-  // 🚪 UPDATE AVATAR
-  // =====================
-	socket.on("save avatar", async ({ username, avatar }) => {
-	  try {
-		const result = await User.updateOne(
-		  { username },
-		  { $set: { avatar } }
-		);
-
-		console.log(result);
-
-		if (result.matchedCount === 0) {
-		  console.log("❌ No user found for:", username);
-		  return;
-		}
-
-		io.emit("avatar updated", { username, avatar });
-
-	  } catch (err) {
-		console.error("Avatar update error:", err);
-	  }
-});
-
-
-  /* 
-  
-   // =====================
-  //GET CHAT HISTORY
-  // =====================
-  socket.on("get history", async () => {
-     const history = await Message.find()
-		.sort({ timestamp: 1 })
-		.limit(400);
-      socket.emit('chat history', history);
-   });
-
  
-  
-  // =====================
-  // 🚪 GET AVATAR
-  // =====================
-	socket.on("get users", async () => {
-	  const users = await User.find({}, "username avatar");
-	  socket.emit("users list", users);
-	});
-
- */
 
   // =====================
   // 🚪 DISCONNECT
