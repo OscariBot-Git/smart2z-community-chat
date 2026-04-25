@@ -461,10 +461,25 @@ io.on('connection', (socket) => {
   // 🚪 UPDATE AVATAR
   // =====================
 	socket.on("save avatar", async ({ username, avatar }) => {
-	  await User.updateOne({ username }, { $set: { avatar } });
-	  io.emit("avatar updated", { username, avatar });
-	});
+	  try {
+		const result = await User.updateOne(
+		  { username },
+		  { $set: { avatar } }
+		);
 
+		console.log(result);
+
+		if (result.matchedCount === 0) {
+		  console.log("❌ No user found for:", username);
+		  return;
+		}
+
+		io.emit("avatar updated", { username, avatar });
+
+	  } catch (err) {
+		console.error("Avatar update error:", err);
+	  }
+});
 
 
   /* 
