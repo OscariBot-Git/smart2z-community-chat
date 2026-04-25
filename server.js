@@ -20,11 +20,12 @@ console.log("MONGO_URI:", process.env.MONGO_URI);
 // 🔗 MONGODB CONNECTION
 // =====================
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart2z_chat';
+const type;
 mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log("✅ MongoDB connected");
 	trimByType(type, getLimitByType(type));
-   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+  // await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
@@ -104,7 +105,7 @@ async function trimByType(type, limit) {
 const TYPES = ["chat", "announcement", "news"];
 setInterval(async () => {
   try {
-    for (const type of TYPES) {
+    for (type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
     console.log("Trim cycle completed");
