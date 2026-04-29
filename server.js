@@ -148,7 +148,8 @@ io.on('connection', (socket) => {
 		  
 		socket.emit('initial data', {
 		  users,
-		  messages: history
+		  messages: history,
+		  online: onlineUsers
 		});
 
       const joinMsg = {
