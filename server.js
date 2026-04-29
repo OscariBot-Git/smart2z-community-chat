@@ -27,7 +27,7 @@ mongoose.connect(MONGO_URI)
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-  // await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
@@ -48,8 +48,7 @@ const messageSchema = new mongoose.Schema({
   timestamp: Date,
   edited: Boolean,
   deleted: Boolean,
-  reactions: Object,
-  online: Number
+  reactions: Object
 });
 
 messageSchema.index({ type: 1, timestamp: -1 });
@@ -320,8 +319,7 @@ io.on('connection', (socket) => {
             content: newContent,
             deleted: true,
             role: "system",
-            type: "chat",
-            online: onlineUsers
+            type: "chat"
           }
         );
 
@@ -492,7 +490,6 @@ io.on('connection', (socket) => {
           type: "disconnected",
           content: socket.username + " left the chat",
           timestamp: new Date(),
-          online: onlineUsers,
           reactions: {}
         };
 
