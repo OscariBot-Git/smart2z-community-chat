@@ -27,7 +27,7 @@ mongoose.connect(MONGO_URI)
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+  // await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
@@ -152,14 +152,11 @@ io.on('connection', (socket) => {
 		});
 
       const joinMsg = {
-        id: Date.now() + "_" + Math.random(),
-        username: socket.username,
         role: "system",
         type: "connected",
         content: socket.username + " joined the chat",
         timestamp: new Date(),
-        online: onlineUsers,
-        reactions: {}
+        online: onlineUsers
       };
 
      // notify others users
@@ -481,19 +478,14 @@ io.on('connection', (socket) => {
   socket.on('disconnect', async () => {
     try {
       onlineUsers = Math.max(onlineUsers - 1, 0);
-
       if (socket.username) {
         const leaveMsg = {
-          id: Date.now() + "_" + Math.random(),
-          username: "Smart2z",
           role: "system",
           type: "disconnected",
           content: socket.username + " left the chat",
           timestamp: new Date(),
-          reactions: {}
+		  online: onlineUsers
         };
-
-      //  await Message.create(leaveMsg);
 
         io.emit('chat message', leaveMsg);
       }
