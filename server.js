@@ -163,7 +163,7 @@ io.on('connection', (socket) => {
       };
 
      // notify others users
-      socket.emit('chat message', joinMsg);
+      socket.broadcast.emit('chat message', joinMsg);
     } catch (err) {
       console.error("JOIN ERROR:", err);
     }
