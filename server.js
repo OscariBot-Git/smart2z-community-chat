@@ -331,15 +331,17 @@ io.on('connection', (socket) => {
 
         const newContent = socket.username + " deleted this message";
 
-        await Message.updateOne(
-          { id: msgId },
-          {
-            content: newContent,
-            deleted: true,
-          //  role: "system",
-            type: "delete"
-          }
-        );
+         await Message.updateOne(
+			{ id: msgId },
+			{
+			  $set: {
+				content: newContent,
+				deleted: true,
+				type: "delete"
+			  }
+			}
+		  );
+
 
         io.emit('message deleted', {
           id: Date.now() + "_" + Math.random(),
