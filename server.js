@@ -60,7 +60,7 @@ const Message = mongoose.model('Message', messageSchema);
 const userSchema = new mongoose.Schema({
   username: { type: String, unique: true, required: true },
   avatar: {type: String, default: "" },
-  role: {type: String, default: "member" } // "member", "admin", "moderator", etc.
+  role: {type: String, default: "member" }, // "member", "admin", "moderator", etc.
   level: { type: Number, default: 0 },
   rank: { type: String, default: "Beginner" },
   star: { type: Number, default: 0 },
