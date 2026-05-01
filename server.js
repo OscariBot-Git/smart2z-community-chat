@@ -27,7 +27,7 @@ mongoose.connect(MONGO_URI)
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-  // await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
@@ -40,7 +40,6 @@ mongoose.connect(MONGO_URI)
 const messageSchema = new mongoose.Schema({
   id: String,
   username: String,
-  role: String, // "member", "admin", "moderator", etc.
   type: String, // 🔥 "chat", "announcement", "news", "system", etc.
   content: String,
   title: String, // ✅ for announcements/news
@@ -60,7 +59,13 @@ const Message = mongoose.model('Message', messageSchema);
 // =====================
 const userSchema = new mongoose.Schema({
   username: { type: String, unique: true, required: true },
-  avatar: {type: String, default: "" }
+  avatar: {type: String, default: "" },
+  role: {type: String, default: "member" } // "member", "admin", "moderator", etc.
+  level: { type: Number, default: 0 },
+  rank: { type: String, default: "Beginner" },
+  star: { type: Number, default: 0 },
+  progress: { type: Number, default: 0 }
+
 });
 
 const User = mongoose.model('User', userSchema);
@@ -122,51 +127,82 @@ setInterval(async () => {
 // 🔌 SOCKET CONNECTION
 // =====================
 io.on('connection', (socket) => {
+	
+	
 
   // =====================
   // 🚪 JOIN
-  // =====================
-  socket.on('join', async ({ username, role }) => {
-    try {
-      socket.username = username || "Guest";
-      socket.role = role || "member";
-      onlineUsers++;
-	  
-	  // Add new user to the avatar achive
-	  await User.findOneAndUpdate(
-			{ username },
-			{ $setOnInsert: { username, avatar: "" } },
-			{ upsert: true, new: true }
-		  );	  
-	  
-	 // get avatars + messages together
-		const users = await User.find({}, "username avatar");
-		const history = await Message.find()
-		  .sort({ timestamp: 1 })
-		  .limit(400);
-		  
-		socket.emit('initial data', {
-		  users,
-		  messages: history,
-		  online: onlineUsers
-		});
+  // ===================== 
+  socket.on('join', async (profile) => {
+  try {
+    if (!profile || !profile.username) return;
+	
+    socket.username = profile.username;
+	socket.username = profile.role;
+    onlineUsers++;
 
-      const joinMsg = {
-        role: "system",
-        type: "connected",
-        content: socket.username + " joined the chat",
-        timestamp: new Date(),
-        online: onlineUsers
-      };
+    // =========================
+    // 1. UPSERT FULL PROFILE
+    // =========================
+    await User.findOneAndUpdate(
+      { username },
+      {
+        $set: {
+          username: profile.username,
+          role: profile.role,
+          avatar: profile.avatar || "",
 
-     // notify others users
-      socket.broadcast.emit('chat message', joinMsg);
-    } catch (err) {
-      console.error("JOIN ERROR:", err);
-    }
-  });
+          level: profile.level || 1,
+          rank: profile.rank || "Beginner",
+          activity: profile.activity || 0,
+          star: profile.star || 0,
+          progress: profile.progress || 0,
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    // =========================
+    // 2. LOAD ALL USERS (FULL PROFILE)
+    // =========================
+    const users = await User.find({});
+
+    // =========================
+    // 3. LOAD CHAT HISTORY
+    // =========================
+    const history = await Message.find()
+      .sort({ timestamp: 1 })
+      .limit(400);
+
+    // =========================
+    // 4. SEND INITIAL DATA
+    // =========================
+    socket.emit('initial data', {
+      users,
+      messages: history,
+      online: onlineUsers
+    });
+
+    // =========================
+    // 5. BROADCAST JOIN EVENT
+    // =========================
+    const joinMsg = {
+      role: "system",
+      type: "connected",
+      content: `${username} joined the chat`,
+      timestamp: new Date(),
+      online: onlineUsers
+    };
+
+    socket.broadcast.emit('chat message', joinMsg);
+
+  } catch (err) {
+    console.error("JOIN ERROR:", err);
+  }
+});
   
-  
+
+
 
   // =====================
   // 💬 SEND MESSAGE
@@ -190,7 +226,7 @@ io.on('connection', (socket) => {
       const msg = {
         id: Date.now() + "_" + Math.random(),
         username: socket.username,
-        role: socket.role,
+     //   role: socket.role,
         type: "chat",
         content,
         replyTo,
@@ -213,44 +249,28 @@ io.on('connection', (socket) => {
   // =====================
   // 🚪 UPDATE AVATAR
   // =====================
-	socket.on("save avatar", async ({ username, avatar }) => {
-	  await User.updateOne({ username }, { $set: { avatar } });
-	  io.emit("avatar updated", { username, avatar });
-	});
+   socket.on("save avatar", async ({ username, avatar }) => {
+	  try {
+		if (!username || !avatar) return;
+
+		// Update only avatar in DB
+		await User.updateOne(
+		  { username },
+		  { $set: { avatar } }
+		);
+
+		// Broadcast only avatar update
+		io.emit("avatar updated", {
+		  username,
+		  avatar
+		});
+
+	  } catch (err) {
+		console.error("AVATAR UPDATE ERROR:", err);
+	  }
+});
 
 
-
-   // =====================
-  // 📢 GET CHAT
-  // =====================
-  socket.on('get chat', async () => {
-     const history = await Message.find({type: "chat" })
-		.sort({ timestamp: 1 })
-		.limit(chatlimit);
-	  socket.emit('chat history', history);
-	 });
-
-    
-  
-  // =====================
-  // 📢 GET ANNOUNCEMENTS
-  // =====================
- socket.on('get announcements', async () => {
-  const posts = await Message.find({ type: "announcement" })
-    .sort({ timestamp: 1 })
-    .limit(postlimit);
-  socket.emit('announcements', posts);
- });
-
-  // =====================
-  // 📰 GET NEWS
-  // =====================
-  socket.on('get news', async () => {
-  const news = await Message.find({ type: "news" })
-    .sort({ timestamp: 1 })
-    .limit(newslimit);
-  socket.emit('news', news);
- });
 
   // =====================
   // 📢 CREATE ANNOUNCEMENT (ADMIN ONLY)
@@ -260,7 +280,7 @@ io.on('connection', (socket) => {
 	  const msg = {
 		id: Date.now() + "_" + Math.random(),
 		username: socket.username,
-		role: "Admin",
+	  //role: "Admin",
 		type: "announcement",
 		title,
 		content,
@@ -282,7 +302,7 @@ io.on('connection', (socket) => {
 	  const msg = {
 		id: Date.now() + "_" + Math.random(),
 		username: socket.username,
-		role: "Admin",
+	//	role: "Admin",
 		type: "news",
 		title,
 		content,
@@ -315,8 +335,8 @@ io.on('connection', (socket) => {
           {
             content: newContent,
             deleted: true,
-            role: "system",
-            type: "chat"
+          //  role: "system",
+            type: "delete"
           }
         );
 
@@ -480,7 +500,7 @@ io.on('connection', (socket) => {
       onlineUsers = Math.max(onlineUsers - 1, 0);
       if (socket.username) {
         const leaveMsg = {
-          role: "system",
+         // role: "system",
           type: "disconnected",
           content: socket.username + " left the chat",
           timestamp: new Date(),
