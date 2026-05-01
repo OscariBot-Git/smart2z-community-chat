@@ -138,9 +138,10 @@ io.on('connection', (socket) => {
   try {
     if (!profile || !profile.username) return;
 	
-    socket.username = profile.username;
-	socket.role = profile.role;
-    onlineUsers++;
+	const username = profile.username;
+		socket.role = profile.role;
+		socket.username = username;
+		onlineUsers++;
 
     // =========================
     // 1. UPSERT FULL PROFILE
@@ -186,7 +187,7 @@ io.on('connection', (socket) => {
     // 5. BROADCAST JOIN EVENT
     // =========================
     const joinMsg = {
-      role: "system",
+     // role: "system",
       type: "connected",
       content: socket.username + " joined the chat",
       timestamp: new Date(),
