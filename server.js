@@ -62,6 +62,7 @@ const userSchema = new mongoose.Schema({
   avatar: {type: String, default: "" },
   role: {type: String, default: "member" }, // "member", "admin", "moderator", etc.
   level: { type: Number, default: 0 },
+  activity: { type: String, default: '' },
   rank: { type: String, default: "Beginner" },
   star: { type: Number, default: 0 },
   progress: { type: Number, default: 0 }
@@ -150,8 +151,6 @@ io.on('connection', (socket) => {
         $set: {
           username: profile.username,
           role: profile.role,
-          avatar: profile.avatar || "",
-
           level: profile.level || 1,
           rank: profile.rank || "Beginner",
           activity: profile.activity || 0,
