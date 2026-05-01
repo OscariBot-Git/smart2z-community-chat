@@ -139,7 +139,7 @@ io.on('connection', (socket) => {
     if (!profile || !profile.username) return;
 	
     socket.username = profile.username;
-	socket.username = profile.role;
+	socket.role = profile.role;
     onlineUsers++;
 
     // =========================
@@ -188,7 +188,7 @@ io.on('connection', (socket) => {
     const joinMsg = {
       role: "system",
       type: "connected",
-      content: `${username} joined the chat`,
+      content: socket.username + " joined the chat",
       timestamp: new Date(),
       online: onlineUsers
     };
@@ -352,6 +352,7 @@ io.on('connection', (socket) => {
       console.error("DELETE ERROR:", err);
     }
   });
+
 
   // =====================
   // ✏️ EDIT MESSAGE
