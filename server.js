@@ -271,7 +271,7 @@ io.on('connection', (socket) => {
 // =====================
   // 🚪 UPDATE ROLE
   // =====================
-  socket.on("save avatar", async ({ username, role }) => {
+  socket.on("save role", async ({ username, role }) => {
   try {
     if (!username || !role) return;
 
@@ -289,7 +289,7 @@ io.on('connection', (socket) => {
 
     const newrole = meta.value;
 
-    io.emit("avatar updated", {username, newrole, newversion});
+    io.emit("role updated", {username, newrole, newversion});
 
   } catch (err) {
     console.error("AVATAR UPDATE ERROR:", err);
