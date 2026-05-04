@@ -259,13 +259,37 @@ io.on('connection', (socket) => {
       { new: true, upsert: true }
     );
 
-    const usersVersion = meta.value;
+    const newversion = meta.value;
 
-    io.emit("avatar updated", {
-      username,
-      avatar,
-      newversion   
-    });
+    io.emit("avatar updated", {username, avatar, newversion});
+
+  } catch (err) {
+    console.error("AVATAR UPDATE ERROR:", err);
+  }
+});
+
+// =====================
+  // 🚪 UPDATE ROLE
+  // =====================
+  socket.on("save avatar", async ({ username, role }) => {
+  try {
+    if (!username || !role) return;
+
+    await User.updateOne(
+      { username },
+      { $set: { role } }
+    );
+
+    // 👇 increment + return updated version
+    const meta = await Meta.findOneAndUpdate(
+      { key: "users_version" },
+      { $inc: { value: 1 } },
+      { new: true, upsert: true }
+    );
+
+    const newrole = meta.value;
+
+    io.emit("avatar updated", {username, newrole, newversion});
 
   } catch (err) {
     console.error("AVATAR UPDATE ERROR:", err);
