@@ -69,9 +69,12 @@ const User = mongoose.model('User', userSchema);
 // VERSION SCHEMA
 // =====================
 const MetaSchema = new mongoose.Schema({
-  key: String,
-  value: Number
+  key: { type: String, unique: true },
+  value: { type: Number, default: 1 }
 });
+
+const Meta = mongoose.model("Meta", MetaSchema);
+
 
 
 // =====================
