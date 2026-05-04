@@ -60,16 +60,19 @@ const Message = mongoose.model('Message', messageSchema);
 const userSchema = new mongoose.Schema({
   username: { type: String, unique: true, required: true },
   avatar: {type: String, default: "" },
-  role: {type: String, default: "member" }, // "member", "admin", "moderator", etc.
-  level: { type: Number, default: 0 },
-  activity: { type: String, default: '' },
-  rank: { type: String, default: "Beginner" },
-  star: { type: Number, default: 0 },
-  progress: { type: Number, default: 0 }
+  role: {type: String, default: "member" } // "member", "admin", "moderator", etc.
+});
+const User = mongoose.model('User', userSchema);
 
+
+// =====================
+// VERSION SCHEMA
+// =====================
+const MetaSchema = new mongoose.Schema({
+  key: String,
+  value: Number
 });
 
-const User = mongoose.model('User', userSchema);
 
 // =====================
 // ⚙️ CONFIG
@@ -128,79 +131,63 @@ setInterval(async () => {
 // 🔌 SOCKET CONNECTION
 // =====================
 io.on('connection', (socket) => {
-	
-	
+		
 
   // =====================
   // 🚪 JOIN
   // ===================== 
-  socket.on('join', async (profile) => {
+  socket.on('join', async (username, clientVersion) => {
   try {
-    if (!profile || !profile.username) return;
+    if (!username) return;
+
+    socket.username = username;
+    onlineUsers++;
+	if (clientVersion === 0) {
+		await User.findOneAndUpdate(
+		  { username },
+		  { $setOnInsert: { username, avatar: "" } },
+		  { upsert: true }
+		);
+	}
 	
-	const username = profile.username;
-		socket.role = profile.role;
-		socket.username = username;
-		onlineUsers++;
+    // Get global version
+    const meta = await Meta.findOne({ key: "users_version" });
+    const usersVersion = meta?.value || 1;
 
-    // =========================
-    // 1. UPSERT FULL PROFILE
-    // =========================
-    await User.findOneAndUpdate(
-      { username },
-      {
-        $set: {
-          username: profile.username,
-          role: profile.role,
-          level: profile.level || 1,
-          rank: profile.rank || "Beginner",
-          activity: profile.activity || 0,
-          star: profile.star || 0,
-          progress: profile.progress || 0,
-        }
-      },
-      { upsert: true, new: true }
-    );
+    let users = [];
 
-    // =========================
-    // 2. LOAD ALL USERS (FULL PROFILE)
-    // =========================
-    const users = await User.find({});
+    if (clientVersion !== usersVersion) {
+      users = await User.find({},{ username: 1, avatar: 1, role: 1 }).lean();
+    }
 
-    // =========================
-    // 3. LOAD CHAT HISTORY
-    // =========================
-    const history = await Message.find()
+    const history = await Message.find({
+      type: { $in: ["chat", "delete"] }
+    })
       .sort({ timestamp: 1 })
-      .limit(400);
+      .limit(400)
+      .lean();
 
-    // =========================
-    // 4. SEND INITIAL DATA
-    // =========================
     socket.emit('initial data', {
       users,
+      usersVersion: usersVersion,
       messages: history,
       online: onlineUsers
     });
 
-    // =========================
-    // 5. BROADCAST JOIN EVENT
-    // =========================
-    const joinMsg = {
-     // role: "system",
-      type: "connected",
-      content: socket.username + " joined the chat",
-      timestamp: new Date(),
-      online: onlineUsers
-    };
+   const joinMsg = {
+        role: "system",
+        type: "connected",
+        content: socket.username + " joined the chat",
+        timestamp: new Date(),
+        online: onlineUsers
+      };
 
-    socket.broadcast.emit('chat message', joinMsg);
-
-  } catch (err) {
-    console.error("JOIN ERROR:", err);
-  }
+     // notify others users
+      socket.broadcast.emit('chat message', joinMsg);
+    } catch (err) {
+      console.error("JOIN ERROR:", err);
+    }
 });
-  
 
 
 
@@ -226,7 +213,6 @@ io.on('connection', (socket) => {
       const msg = {
         id: Date.now() + "_" + Math.random(),
         username: socket.username,
-     //   role: socket.role,
         type: "chat",
         content,
         replyTo,
@@ -250,24 +236,25 @@ io.on('connection', (socket) => {
   // 🚪 UPDATE AVATAR
   // =====================
    socket.on("save avatar", async ({ username, avatar }) => {
-	  try {
-		if (!username || !avatar) return;
+  try {
+    if (!username || !avatar) return;
 
-		// Update only avatar in DB
-		await User.updateOne(
-		  { username },
-		  { $set: { avatar } }
-		);
+    await User.updateOne(
+      { username },
+      {
+        $set: { avatar },
+        $inc: { version: 1 }   // 👈 important
+      }
+    );
 
-		// Broadcast only avatar update
-		io.emit("avatar updated", {
-		  username,
-		  avatar
-		});
+    io.emit("avatar updated", {
+      username,
+      avatar
+    });
 
-	  } catch (err) {
-		console.error("AVATAR UPDATE ERROR:", err);
-	  }
+  } catch (err) {
+    console.error("AVATAR UPDATE ERROR:", err);
+  }
 });
 
 
@@ -504,7 +491,6 @@ io.on('connection', (socket) => {
       onlineUsers = Math.max(onlineUsers - 1, 0);
       if (socket.username) {
         const leaveMsg = {
-         // role: "system",
           type: "disconnected",
           content: socket.username + " left the chat",
           timestamp: new Date(),
