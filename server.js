@@ -27,12 +27,12 @@ mongoose.connect(MONGO_URI)
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+   /* await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
     await Meta.updateOne(
 	  { key: "users_version" },
 	  { $setOnInsert: { value: 1 } },
 	  { upsert: true }
-	);
+	); */
    
   })
   .catch(err => console.error("❌ MongoDB error:", err));
@@ -243,28 +243,34 @@ io.on('connection', (socket) => {
   // =====================
   // 🚪 UPDATE AVATAR
   // =====================
-   socket.on("save avatar", async ({ username, avatar }) => {
+  socket.on("save avatar", async ({ username, avatar }) => {
   try {
     if (!username || !avatar) return;
 
     await User.updateOne(
       { username },
-      {
-        $set: { avatar },
-        $inc: { version: 1 }   // 👈 important
-      }
+      { $set: { avatar } }
     );
+
+    // 👇 increment + return updated version
+    const meta = await Meta.findOneAndUpdate(
+      { key: "users_version" },
+      { $inc: { value: 1 } },
+      { new: true, upsert: true }
+    );
+
+    const usersVersion = meta.value;
 
     io.emit("avatar updated", {
       username,
-      avatar
+      avatar,
+      newversion   
     });
 
   } catch (err) {
     console.error("AVATAR UPDATE ERROR:", err);
   }
 });
-
 
 
   // =====================
