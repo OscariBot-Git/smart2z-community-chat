@@ -75,7 +75,11 @@ const MetaSchema = new mongoose.Schema({
 
 const Meta = mongoose.model("Meta", MetaSchema);
 
-
+await Meta.updateOne(
+  { key: "users_version" },
+  { $setOnInsert: { value: 1 } },
+  { upsert: true }
+);
 
 // =====================
 // ⚙️ CONFIG
@@ -153,11 +157,7 @@ io.on('connection', (socket) => {
 		);
 	}
 	
-	await Meta.updateOne(
-  { key: "users_version" },
-  { $inc: { value: 1 } },
-  { upsert: true }
-);
+	 
     // Get global version
     const meta = await Meta.findOne({ key: "users_version" });
     const usersVersion = meta?.value || 1;
