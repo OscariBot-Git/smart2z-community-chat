@@ -28,6 +28,12 @@ mongoose.connect(MONGO_URI)
       await trimByType(type, getLimitByType(type));
     }
    await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+    await Meta.updateOne(
+	  { key: "users_version" },
+	  { $setOnInsert: { value: 1 } },
+	  { upsert: true }
+	);
+   
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
@@ -72,14 +78,8 @@ const MetaSchema = new mongoose.Schema({
   key: { type: String, unique: true },
   value: { type: Number, default: 1 }
 });
-
 const Meta = mongoose.model("Meta", MetaSchema);
 
-await Meta.updateOne(
-  { key: "users_version" },
-  { $setOnInsert: { value: 1 } },
-  { upsert: true }
-);
 
 // =====================
 // ⚙️ CONFIG
@@ -156,7 +156,7 @@ io.on('connection', (socket) => {
 		  { upsert: true }
 		);
 	}
-	
+			
 	 
     // Get global version
     const meta = await Meta.findOne({ key: "users_version" });
