@@ -160,7 +160,8 @@ io.on('connection', (socket) => {
 	 
     // Get global version
     const meta = await Meta.findOne({ key: "users_version" });
-    const usersVersion = meta?.value || 1;
+    //const usersVersion = meta?.value || 1;
+	const usersVersion = 1;
 
     let users = [];
 
