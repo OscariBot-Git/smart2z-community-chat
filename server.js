@@ -149,13 +149,22 @@ io.on('connection', (socket) => {
 
     socket.username = username;
     onlineUsers++;
+	let user;
+	
 	if (clientVersion === 0) {
-		await User.findOneAndUpdate(
-		  { username },
-		  { $setOnInsert: { username, avatar: "" } },
-		  { upsert: true }
-		);
-	}
+      user = await User.findOneAndUpdate(
+        { username },
+        { $setOnInsert: { username, avatar: "", role: "member" } },
+        { upsert: true, new: true }
+      ).lean();
+    } else {
+      user = await User.findOne(
+        { username },
+        { role: 1 }
+      ).lean();
+    }
+
+    socket.role = user?.role || "member";
 			
 	 
     // Get global version
@@ -268,34 +277,42 @@ io.on('connection', (socket) => {
   }
 });
 
-// =====================
-  // 🚪 UPDATE ROLE
   // =====================
-  socket.on("save role", async ({ username, role }) => {
-  try {
-    if (!username || !role) return;
+  // 🚪 UPDATE ROLE
+  // =====================	  
+	socket.on("save role", async ({ username, newrole }) => {
+	  try {
+		// ✅ Only Admin can update roles
+		if (socket.role !== "Admin") return;
+		
 
-    await User.updateOne(
-      { username },
-      { $set: { role } }
-    );
 
-    // 👇 increment + return updated version
-    const meta = await Meta.findOneAndUpdate(
-      { key: "users_version" },
-      { $inc: { value: 1 } },
-      { new: true, upsert: true }
-    );
+		// ✅ Update role correctly
+		await User.updateOne(
+		  { username },
+		  { $set: { role: newrole } }
+		);
 
-    const newrole = meta.value;
+		// ✅ Increment global users version
+		const meta = await Meta.findOneAndUpdate(
+		  { key: "users_version" },
+		  { $inc: { value: 1 } },
+		  { new: true, upsert: true }
+		);
 
-    io.emit("role updated", {username, newrole, newversion});
+		const newversion = meta.value;
 
-  } catch (err) {
-    console.error("AVATAR UPDATE ERROR:", err);
-  }
-});
+		// ✅ Emit correct data
+		io.emit("role updated", {
+		  username,
+		  role: newrole,
+		  newversion
+		});
 
+	  } catch (err) {
+		console.error("ROLE UPDATE ERROR:", err);
+	  }
+	});
 
   // =====================
   // 📢 CREATE ANNOUNCEMENT (ADMIN ONLY)
