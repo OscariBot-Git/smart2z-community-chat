@@ -143,7 +143,7 @@ io.on('connection', (socket) => {
   // =====================
   // 🚪 JOIN
   // ===================== 
-  socket.on('join', async (username, clientVersion) => {
+  socket.on('join', async (username, clientVersion, lastMsgId) => {
   try {
     if (!username) return;
 
@@ -177,12 +177,20 @@ io.on('connection', (socket) => {
       users = await User.find({},{ username: 1, avatar: 1, role: 1 }).lean();
     }
 
-    const history = await Message.find({
-      type: { $in: ["chat", "delete"] }
-    })
-      .sort({ timestamp: 1 })
-      .limit(400)
-      .lean();
+   //  Fetch messages history
+		let query = {
+		  type: { $in: ["chat", "delete"] }
+		};
+
+		// 🔄 returning user → only fetch new messages
+		if (lastMsgId) {
+		  query._id = { $gt: lastMsgId };
+		}
+
+		const history = await Message.find(query)
+		  .sort({ timestamp: 1 })
+		  .limit(400)
+		  .lean();
 
     socket.emit('initial data', {
       users,
