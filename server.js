@@ -168,16 +168,16 @@ io.on('connection', (socket) => {
 			
 	 
        // Get global version
-    const meta = await Meta.findOne({ key: "users_version" });
-    const usersVersion = meta?.value || 1;
+    const meta1 = await Meta.findOne({ key: "users_version" });
+    const usersVersion = meta1?.value || 1;
 	
 		// Get news version
-      meta = await Meta.findOne({ key: "news_version" });
-    const newsVersion = meta?.value || 1;
+    const meta2 = await Meta.findOne({ key: "news_version" });
+    const newsVersion = meta2?.value || 1;
 	 
 	 // Get news version
-      meta = await Meta.findOne({ key: "announcement_version" });
-    const announcementVersion = meta?.value || 1;
+    const meta3 = await Meta.findOne({ key: "announcement_version" });
+    const announcementVersion = meta3?.value || 1;
 
 
     let users = [];
