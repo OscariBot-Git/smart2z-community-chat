@@ -362,11 +362,52 @@ io.on('connection', (socket) => {
 
     const saved = await Message.create(msg);
 
-  io.emit('announcement update', {version: newVersion, data: saved});
+  io.emit('announcement update', {newversion: newVersion, messages: saved});
   } catch (err) {
     console.error("Create news error:", err);
   }
 });
+
+
+// =====================
+  // 📢 CREATE NEWS (ADMIN ONLY)
+  // =====================
+socket.on('create news', async ({ title, content }) => {
+  try {
+    if (socket.role !== "Admin") return;
+
+    // Increment version
+    const meta = await Meta.findOneAndUpdate(
+      { key: "news_version" },
+      { $inc: { value: 1 } },
+      { new: true, upsert: true }
+    );
+
+    const newVersion = meta.value;
+
+    const msg = {
+      username: socket.username,
+      type: "news",
+      title,
+      content,
+      timestamp: new Date(),
+      edited: false,
+      reactions: {}
+    };
+
+    const saved = await Message.create(msg);
+
+  io.emit('news update', {newversion: newVersion, messages: saved});
+  } catch (err) {
+    console.error("Create news error:", err);
+  }
+});
+
+ 
+
+
+
+
 
 
  // =====================
@@ -395,7 +436,7 @@ socket.on('get announcement', async ({ lastMsgId, clientVersion }) => {
       .limit(400)
       .lean();
 
-    socket.emit('more announcement', {
+    socket.emit('announcement update', {
       newversion: serverVersion,
       messages: newannoucement
     });
@@ -406,41 +447,7 @@ socket.on('get announcement', async ({ lastMsgId, clientVersion }) => {
 });
  
  
-  // =====================
-  // 📢 CREATE NEWS (ADMIN ONLY)
-  // =====================
-socket.on('create news', async ({ title, content }) => {
-  try {
-    if (socket.role !== "Admin") return;
-
-    // 🔼 Increment version
-    const meta = await Meta.findOneAndUpdate(
-      { key: "news_version" },
-      { $inc: { value: 1 } },
-      { new: true, upsert: true }
-    );
-
-    const newVersion = meta.value;
-
-    const msg = {
-      username: socket.username,
-      type: "news",
-      title,
-      content,
-      timestamp: new Date(),
-      edited: false,
-      reactions: {}
-    };
-
-    const saved = await Message.create(msg);
-
-  io.emit('news update', {version: newVersion, data: saved});
-  } catch (err) {
-    console.error("Create news error:", err);
-  }
-});
-
- 
+  
  // =====================
  // 📰 GET NEWS
  // =====================
@@ -467,7 +474,7 @@ socket.on('get news', async ({ lastMsgId, clientVersion }) => {
       .limit(400)
       .lean();
 
-    socket.emit('more news', {
+    socket.emit('news update', {
       newversion: serverVersion,
       messages: newnews
     });
@@ -476,18 +483,6 @@ socket.on('get news', async ({ lastMsgId, clientVersion }) => {
     console.error("Get news error:", err);
   }
 });
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
  
  
 
