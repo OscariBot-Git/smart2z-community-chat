@@ -356,7 +356,7 @@ io.on('connection', (socket) => {
 
     const messages = await Message.create(msg);
 
-  io.emit('announcement update', {newversion, messages});
+  io.emit('announcement update', {newversion, [messages]});
   } catch (err) {
     console.error("Create news error:", err);
   }
@@ -391,7 +391,7 @@ socket.on('create news', async ({ title, content }) => {
 
     const messages = await Message.create(msg);
 
-  io.emit('news update', {newversion, messages});
+  io.emit('news update', {newversion, [messages]});
   } catch (err) {
     console.error("Create news error:", err);
   }
