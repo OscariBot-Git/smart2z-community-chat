@@ -348,7 +348,7 @@ io.on('connection', (socket) => {
       { new: true, upsert: true }
     );
 
-    const newVersion = meta.value;
+    const newversion = meta.value;
 
     const msg = {
       username: socket.username,
@@ -360,9 +360,9 @@ io.on('connection', (socket) => {
       reactions: {}
     };
 
-    const saved = await Message.create(msg);
+    const messages = await Message.create(msg);
 
-  io.emit('announcement update', {newversion: newVersion, messages: saved});
+  io.emit('announcement update', {newversion, messages});
   } catch (err) {
     console.error("Create news error:", err);
   }
@@ -383,7 +383,7 @@ socket.on('create news', async ({ title, content }) => {
       { new: true, upsert: true }
     );
 
-    const newVersion = meta.value;
+    const newversion = meta.value;
 
     const msg = {
       username: socket.username,
@@ -395,18 +395,13 @@ socket.on('create news', async ({ title, content }) => {
       reactions: {}
     };
 
-    const saved = await Message.create(msg);
+    const messages = await Message.create(msg);
 
-  io.emit('news update', {newversion: newVersion, messages: saved});
+  io.emit('news update', {newversion, messages});
   } catch (err) {
     console.error("Create news error:", err);
   }
 });
-
- 
-
-
-
 
 
 
@@ -418,27 +413,26 @@ socket.on('get announcement', async ({ lastMsgId, clientVersion }) => {
     const meta = await Meta.findOne({ key: "announcement_version" });
     const serverVersion = meta?.value || 1;
 
-    if (clientVersion === serverVersion) {
-      return socket.emit('announcement update', {
-        newversion: serverVersion,
-        messages: []
-      });
+    let messages = [];
+
+    if (clientVersion !== serverVersion) {
+      let query = { type: "announcement" };
+
+      if (lastMsgId) {
+        query._id = { $gt: lastMsgId };
+      }
+
+      const newannouncement = await Message.find(query)
+        .sort({ timestamp: 1 })
+        .limit(400)
+        .lean();
+
+      messages = Array.isArray(newannouncement) ? newannouncement : [];
     }
-
-    let query = { type: "announcement" };
-
-    if (lastMsgId) {
-      query._id = { $gt: lastMsgId };
-    }
-
-    const newannoucement = await Message.find(query)
-      .sort({ timestamp: 1 })
-      .limit(400)
-      .lean();
 
     socket.emit('announcement update', {
       newversion: serverVersion,
-      messages: newannoucement
+      messages
     });
 
   } catch (err) {
@@ -456,34 +450,32 @@ socket.on('get news', async ({ lastMsgId, clientVersion }) => {
     const meta = await Meta.findOne({ key: "news_version" });
     const serverVersion = meta?.value || 1;
 
-    if (clientVersion === serverVersion) {
-      return socket.emit('news update', {
-        newversion: serverVersion,
-        messages: []
-      });
+    let messages = [];
+
+    if (clientVersion !== serverVersion) {
+      let query = { type: "news" };
+
+      if (lastMsgId) {
+        query._id = { $gt: lastMsgId };
+      }
+
+      const newnews = await Message.find(query)
+        .sort({ timestamp: 1 })
+        .limit(400)
+        .lean();
+
+      messages = Array.isArray(newnews) ? newnews : [];
     }
-
-    let query = { type: "news" };
-
-    if (lastMsgId) {
-      query._id = { $gt: lastMsgId };
-    }
-
-    const newnews = await Message.find(query)
-      .sort({ timestamp: 1 })
-      .limit(400)
-      .lean();
 
     socket.emit('news update', {
       newversion: serverVersion,
-      messages: newnews
+      messages
     });
 
   } catch (err) {
     console.error("Get news error:", err);
   }
 });
- 
  
 
   // =====================
