@@ -167,9 +167,18 @@ io.on('connection', (socket) => {
     socket.role = user?.role || "member";
 			
 	 
-    // Get global version
+       // Get global version
     const meta = await Meta.findOne({ key: "users_version" });
     const usersVersion = meta?.value || 1;
+	
+		// Get news version
+      meta = await Meta.findOne({ key: "news_version" });
+    const newsVersion = meta?.value || 1;
+	 
+	 // Get news version
+      meta = await Meta.findOne({ key: "announcement_version" });
+    const announcementVersion = meta?.value || 1;
+
 
     let users = [];
 
@@ -177,12 +186,12 @@ io.on('connection', (socket) => {
       users = await User.find({},{ username: 1, avatar: 1, role: 1 }).lean();
     }
 
-   //  Fetch messages history
+   // Fetch messages history
 		let query = {
 		  type: { $in: ["chat", "delete"] }
 		};
 
-		// 🔄 returning user → only fetch new messages
+		// returning user → only fetch new messages
 		if (lastMsgId) {
 		  query._id = { $gt: lastMsgId };
 		}
@@ -194,9 +203,11 @@ io.on('connection', (socket) => {
 
     socket.emit('initial data', {
       users,
-      newversion: usersVersion,
-      messages: history,
-      online: onlineUsers
+      usersVersion,
+	  newsVersion,
+	  announcementVersion,
+      history,
+      onlineUsers
     });
 
    const joinMsg = {
@@ -321,52 +332,163 @@ io.on('connection', (socket) => {
 		console.error("ROLE UPDATE ERROR:", err);
 	  }
 	});
+	
 
   // =====================
   // 📢 CREATE ANNOUNCEMENT (ADMIN ONLY)
   // =====================
   socket.on('create announcement', async ({ title, content }) => {
-   if (socket.role !== "Admin") return;
-	  const msg = {
-		id: Date.now() + "_" + Math.random(),
-		username: socket.username,
-	  //role: "Admin",
-		type: "announcement",
-		title,
-		content,
-		timestamp: new Date(),
-		edited: false,
-		reactions: {}
-	  };
+  try {
+    if (socket.role !== "Admin") return;
 
-  await Message.create(msg);
+    // 🔼 Increment version
+    const meta = await Meta.findOneAndUpdate(
+      { key: "announcement_version" },
+      { $inc: { value: 1 } },
+      { new: true, upsert: true }
+    );
 
-  io.emit('new announcement', msg);
- });
+    const newVersion = meta.value;
+
+    const msg = {
+      username: socket.username,
+      type: "news",
+      title,
+      content,
+      timestamp: new Date(),
+      edited: false,
+      reactions: {}
+    };
+
+    const saved = await Message.create(msg);
+
+  io.emit('announcement update', {version: newVersion, data: saved});
+  } catch (err) {
+    console.error("Create news error:", err);
+  }
+});
+
+
+ // =====================
+ // 📰 GET ANNOUNCEMENT
+ // =====================
+socket.on('get announcement', async ({ lastMsgId, clientVersion }) => {
+  try {
+    const meta = await Meta.findOne({ key: "announcement_version" });
+    const serverVersion = meta?.value || 1;
+
+    if (clientVersion === serverVersion) {
+      return socket.emit('more news', {
+        newversion: serverVersion,
+        messages: []
+      });
+    }
+
+    let query = { type: "announcement" };
+
+    if (lastMsgId) {
+      query._id = { $gt: lastMsgId };
+    }
+
+    const newannoucement = await Message.find(query)
+      .sort({ timestamp: 1 })
+      .limit(400)
+      .lean();
+
+    socket.emit('more announcement', {
+      newversion: serverVersion,
+      messages: newannoucement
+    });
+
+  } catch (err) {
+    console.error("Get news error:", err);
+  }
+});
  
  
+  // =====================
+  // 📢 CREATE NEWS (ADMIN ONLY)
+  // =====================
+socket.on('create news', async ({ title, content }) => {
+  try {
+    if (socket.role !== "Admin") return;
+
+    // 🔼 Increment version
+    const meta = await Meta.findOneAndUpdate(
+      { key: "news_version" },
+      { $inc: { value: 1 } },
+      { new: true, upsert: true }
+    );
+
+    const newVersion = meta.value;
+
+    const msg = {
+      username: socket.username,
+      type: "news",
+      title,
+      content,
+      timestamp: new Date(),
+      edited: false,
+      reactions: {}
+    };
+
+    const saved = await Message.create(msg);
+
+  io.emit('news update', {version: newVersion, data: saved});
+  } catch (err) {
+    console.error("Create news error:", err);
+  }
+});
+
+ 
  // =====================
- // 📰 CREATE NEWS (ADMIN ONLY)
+ // 📰 GET NEWS
  // =====================
-  socket.on('create news', async ({ title, content }) => {
-   if (socket.role !== "Admin") return;
-	  const msg = {
-		id: Date.now() + "_" + Math.random(),
-		username: socket.username,
-	//	role: "Admin",
-		type: "news",
-		title,
-		content,
-		timestamp: new Date(),
-		edited: false,
-		reactions: {}
-	  };
+socket.on('get news', async ({ lastMsgId, clientVersion }) => {
+  try {
+    const meta = await Meta.findOne({ key: "news_version" });
+    const serverVersion = meta?.value || 1;
 
-  await Message.create(msg);
+    if (clientVersion === serverVersion) {
+      return socket.emit('more news', {
+        newversion: serverVersion,
+        messages: []
+      });
+    }
 
-   io.emit('news update', msg);
- });
+    let query = { type: "news" };
 
+    if (lastMsgId) {
+      query._id = { $gt: lastMsgId };
+    }
+
+    const newnews = await Message.find(query)
+      .sort({ timestamp: 1 })
+      .limit(400)
+      .lean();
+
+    socket.emit('more news', {
+      newversion: serverVersion,
+      messages: newnews
+    });
+
+  } catch (err) {
+    console.error("Get news error:", err);
+  }
+});
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
  
 
   // =====================
