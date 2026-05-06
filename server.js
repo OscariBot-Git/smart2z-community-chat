@@ -27,19 +27,7 @@ mongoose.connect(MONGO_URI)
     for (const type of TYPES) {
       await trimByType(type, getLimitByType(type));
     }
-   await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
-    await Meta.updateOne(
-	  { key: "news_version" },
-	  { $setOnInsert: { value: 1 } },
-	  { upsert: true }
-	);
-	
-	await Meta.updateOne(
-	  { key: "announcement_version" },
-	  { $setOnInsert: { value: 1 } },
-	  { upsert: true }
-	);
-   
+   //await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
   })
   .catch(err => console.error("❌ MongoDB error:", err));
 
