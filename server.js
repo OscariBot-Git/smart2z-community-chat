@@ -165,21 +165,21 @@ io.on('connection', (socket) => {
     }
 
     socket.role = user?.role || "member";
-			
-	 
-       // Get global version
-    const meta1 = await Meta.findOne({ key: "users_version" });
-    const usersVersion = meta1?.value || 1;
-	
-		// Get news version
-    const meta2 = await Meta.findOne({ key: "news_version" });
-    const newsVersion = meta2?.value || 1;
-	 
-	 // Get news version
-    const meta3 = await Meta.findOne({ key: "announcement_version" });
-    const announcementVersion = meta3?.value || 1;
+				 
+   const metas = await Meta.find({
+		  key: { $in: ["users_version", "news_version", "announcement_version"] }
+		});
 
+		let usersVersion = 1;
+		let newsVersion = 1;
+		let announcementVersion = 1;
 
+		metas.forEach(m => {
+		  if (m.key === "users_version") usersVersion = m.value;
+		  if (m.key === "news_version") newsVersion = m.value;
+		  if (m.key === "announcement_version") announcementVersion = m.value;
+		});
+		
     let users = [];
 
     if (clientVersion !== usersVersion) {
