@@ -354,9 +354,9 @@ io.on('connection', (socket) => {
       reactions: {}
     };
 
-    const messages = await Message.create(msg);
+    const save = await Message.create(msg);
 
-  io.emit('announcement update', {newversion, [messages]});
+  io.emit('announcement update', {newversion, messages: [save]});
   } catch (err) {
     console.error("Create news error:", err);
   }
@@ -389,9 +389,9 @@ socket.on('create news', async ({ title, content }) => {
       reactions: {}
     };
 
-    const messages = await Message.create(msg);
+    const save = await Message.create(msg);
 
-  io.emit('news update', {newversion, [messages]});
+  io.emit('news update', {newversion, messages: [save]});
   } catch (err) {
     console.error("Create news error:", err);
   }
