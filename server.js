@@ -419,7 +419,7 @@ socket.on('get announcement', async ({ lastMsgId, clientVersion }) => {
     const serverVersion = meta?.value || 1;
 
     if (clientVersion === serverVersion) {
-      return socket.emit('more news', {
+      return socket.emit('announcement update', {
         newversion: serverVersion,
         messages: []
       });
@@ -457,7 +457,7 @@ socket.on('get news', async ({ lastMsgId, clientVersion }) => {
     const serverVersion = meta?.value || 1;
 
     if (clientVersion === serverVersion) {
-      return socket.emit('more news', {
+      return socket.emit('news update', {
         newversion: serverVersion,
         messages: []
       });
