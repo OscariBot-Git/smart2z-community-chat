@@ -206,8 +206,8 @@ io.on('connection', (socket) => {
       usersVersion,
 	  newsVersion,
 	  announcementVersion,
-      history,
-      onlineUsers
+      messages: history,
+      online: onlineUsers
     });
 
    const joinMsg = {
