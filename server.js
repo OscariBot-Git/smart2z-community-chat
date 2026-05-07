@@ -28,7 +28,8 @@ mongoose.connect(MONGO_URI)
       await trimByType(type, getLimitByType(type));
     }
    //await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
-  })
+const docs = await Meta.find({ key: "news_version" });
+console.log(docs);  })
   .catch(err => console.error("❌ MongoDB error:", err));
 
 
@@ -391,7 +392,7 @@ socket.on('create news', async ({ title, content }) => {
 
     const save = await Message.create(msg);
 
-  io.emit('news update', {newversion, messages: [save]});
+  io.emit('news update', {newversion, messages: save});
   } catch (err) {
     console.error("Create news error:", err);
   }
