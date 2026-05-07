@@ -161,20 +161,22 @@ io.on('connection', (socket) => {
 
     socket.role = user?.role || "member";
 				 
-   const metas = await Meta.find({
-		  key: { $in: ["users_version", "news_version", "announcement_version"] }
-		});
+    // 🔥 IMPORTANT FIX: make lookup deterministic
+    const metaDocs = await Meta.find({
+      key: { $in: ["users_version", "news_version", "announcement_version"] }
+    }).lean();
 
-		let usersVersion = 1;
-		let newsVersion = 1;
-		let announcementVersion = 1;
+    const metaMap = Object.fromEntries(
+      metaDocs.map(m => [m.key, m.value])
+    );
 
-		metas.forEach(m => {
-		  if (m.key === "users_version") usersVersion = m.value;
-		  if (m.key === "news_version") newsVersion = m.value;
-		  if (m.key === "announcement_version") announcementVersion = m.value;
-		});
-		
+    const usersVersion = metaMap.users_version ?? 1;
+    const newsVersion = metaMap.news_version ?? 1;
+    const announcementVersion = metaMap.announcement_version ?? 1;
+
+    // debug (TEMP)
+    console.log("JOIN VERSIONS:", {usersVersion, newsVersion, announcementVersion});
+	
     let users = [];
 
     if (clientVersion !== usersVersion) {
