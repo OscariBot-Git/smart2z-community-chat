@@ -436,38 +436,52 @@ socket.on('get announcement', async ({ lastMsgId, clientVersion }) => {
  
  
  // =====================
- // 📰 GET NEWS
- // =====================
-socket.on('get news', async ({ lastMsgId, clientVersion }) => {
-  try {
-    const meta = await Meta.findOne({ key: "news_version" });
-    const serverVersion = meta?.value || 1;
+// 📰 GET NEWS
+// =====================
 
-    let messages = [];
+	socket.on('get news', async ({ lastNewsTimestamp, clientVersion }) => {
+	  try {
 
-    if (clientVersion !== serverVersion) {
+		// 🔹 current global news version
+		const meta = await Meta.findOne({ key: "news_version" });
+		const serverVersion = meta?.value || 1;
 
-      const query = { type: "news" };
+		let messages = [];
 
-      if (lastMsgId) {
-        query._id = { $gt: lastMsgId };
-      }
+		// 🔹 only query if client is outdated
+		if (clientVersion !== serverVersion) {
 
-      messages = await Message.find(query)
-        .sort({ timestamp: 1 })
-        .limit(400)
-        .lean();
-    }
+		  // base query
+		  const query = {
+			type: "news"
+		  };
 
-    socket.emit('news update', {
-      newversion: serverVersion,
-      messages
-    });
+		  // 🔹 fetch only newer news
+		  if (lastNewsTimestamp) {
+			query.timestamp = {
+			  $gt: new Date(lastNewsTimestamp)
+			};
+		  }
 
-  } catch (err) {
-    console.error("Get news error:", err);
-  }
-});
+		  // 🔹 get missing news
+		  messages = await Message.find(query)
+			.sort({ timestamp: 1, _id: 1 })
+			.limit(400)
+			.lean();
+		}
+
+		// 🔹 always emit consistent structure
+		socket.emit('news update', {
+		  newversion: serverVersion,
+		  messages
+		});
+
+	  } catch (err) {
+		console.error("Get news error:", err);
+	  }
+	});
+
+
 
   // =====================
   // ❌ DELETE MESSAGE
