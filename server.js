@@ -346,7 +346,7 @@ io.on('connection', (socket) => {
 
     const msg = {
       username: socket.username,
-      type: "news",
+      type: "announcement",
       title,
       content,
       timestamp: new Date(),
@@ -435,7 +435,6 @@ socket.on('get announcement', async ({ lastMsgId, clientVersion }) => {
 });
  
  
-  
  // =====================
  // 📰 GET NEWS
  // =====================
@@ -447,18 +446,17 @@ socket.on('get news', async ({ lastMsgId, clientVersion }) => {
     let messages = [];
 
     if (clientVersion !== serverVersion) {
-      let query = { type: "news" };
+
+      const query = { type: "news" };
 
       if (lastMsgId) {
         query._id = { $gt: lastMsgId };
       }
 
-      const newnews = await Message.find(query)
+      messages = await Message.find(query)
         .sort({ timestamp: 1 })
         .limit(400)
         .lean();
-
-      messages = Array.isArray(newnews) ? newnews : [];
     }
 
     socket.emit('news update', {
@@ -470,7 +468,6 @@ socket.on('get news', async ({ lastMsgId, clientVersion }) => {
     console.error("Get news error:", err);
   }
 });
- 
 
   // =====================
   // ❌ DELETE MESSAGE
