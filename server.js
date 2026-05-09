@@ -137,7 +137,7 @@ io.on('connection', (socket) => {
   // =====================
   // 🚪 JOIN
   // ===================== 
-  socket.on('join', async (username, clientVersion, lastMsgId) => {
+  socket.on('join', async (username, clientVersion, lastChatTimestamp) => {
   try {
     if (!username) return;
 
@@ -184,9 +184,12 @@ io.on('connection', (socket) => {
 		  type: { $in: ["chat", "delete"] }
 		};
 
-		// returning user → only fetch new messages
-		if (lastMsgId) {
-		  query._id = { $gt: lastMsgId };
+		// 🔹 returning user → fetch only newer messages
+		if (lastChatTimestamp) {
+
+		  query.timestamp = {
+			$gt: new Date(lastChatTimestamp)
+		  };
 		}
 
 		const history = await Message.find(query)
@@ -401,19 +404,28 @@ socket.on('create news', async ({ title, content }) => {
  // =====================
  // 📰 GET ANNOUNCEMENT
  // =====================
-socket.on('get announcement', async ({ lastMsgId, clientVersion }) => {
+socket.on('get announcement', async ({ lastNewsTimestamp, clientVersion }) => {
   try {
     const meta = await Meta.findOne({ key: "announcement_version" });
     const serverVersion = meta?.value || 1;
 
     let messages = [];
 
-    if (clientVersion !== serverVersion) {
-      let query = { type: "announcement" };
+		// 🔹 only query if client is outdated
+		if (clientVersion !== serverVersion) {
 
-      if (lastMsgId) {
-        query._id = { $gt: lastMsgId };
-      }
+		  // base query
+		  const query = {
+			type: "announcement"
+		  };
+
+		  // 🔹 fetch only newer announcements
+		  if (lastNewsTimestamp) {
+			query.timestamp = {
+			  $gt: new Date(lastNewsTimestamp)
+			};
+		  }
+
 
       const newannouncement = await Message.find(query)
         .sort({ timestamp: 1 })
