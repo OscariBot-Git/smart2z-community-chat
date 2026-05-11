@@ -404,7 +404,7 @@ socket.on('create news', async ({ title, content }) => {
  // =====================
  // 📰 GET ANNOUNCEMENT
  // =====================
-socket.on('get announcement', async ({ lastNewsTimestamp, clientVersion }) => {
+socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion }) => {
   try {
     const meta = await Meta.findOne({ key: "announcement_version" });
     const serverVersion = meta?.value || 1;
@@ -420,9 +420,9 @@ socket.on('get announcement', async ({ lastNewsTimestamp, clientVersion }) => {
 		  };
 
 		  // 🔹 fetch only newer announcements
-		  if (lastNewsTimestamp) {
+		  if (lastAnnouncementTimestamp) {
 			query.timestamp = {
-			  $gt: new Date(lastNewsTimestamp)
+			  $gt: new Date(lastAnnouncementTimestamp)
 			};
 		  }
 
@@ -435,10 +435,7 @@ socket.on('get announcement', async ({ lastNewsTimestamp, clientVersion }) => {
       messages = Array.isArray(newannouncement) ? newannouncement : [];
     }
 
-    socket.emit('announcement update', {
-      newversion: serverVersion,
-      messages
-    });
+    socket.emit('announcement update', {newversion: serverVersion,messages});
 
   } catch (err) {
     console.error("Get news error:", err);
@@ -482,10 +479,7 @@ socket.on('get announcement', async ({ lastNewsTimestamp, clientVersion }) => {
 		}
 
 		// 🔹 always emit consistent structure
-		socket.emit('news update', {
-		  newversion: serverVersion,
-		  messages
-		});
+		socket.emit('news update', {newversion: serverVersion,messages});
 
 	  } catch (err) {
 		console.error("Get news error:", err);
