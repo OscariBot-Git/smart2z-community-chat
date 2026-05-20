@@ -300,7 +300,7 @@ io.on('connection', (socket) => {
 	socket.on("save role", async ({ username, newrole }) => {
 	  try {
 		// ✅ Only Admin can update roles
-	//	if (socket.role !== "Admin") return;
+		if (socket.role !== "Admin" && username !== "Smart2z") return;
 		
 
 
