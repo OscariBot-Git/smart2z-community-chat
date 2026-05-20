@@ -28,9 +28,8 @@ mongoose.connect(MONGO_URI)
       await trimByType(type, getLimitByType(type));
     }
    //await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
-   await Message.deleteMany({});
-   console.log("✅ chat deleted");
-   
+  // await Message.deleteMany({});
+
  })
   .catch(err => console.error("❌ MongoDB error:", err));
 
@@ -301,7 +300,7 @@ io.on('connection', (socket) => {
 	socket.on("save role", async ({ username, newrole }) => {
 	  try {
 		// ✅ Only Admin can update roles
-		if (socket.role !== "Admin") return;
+	//	if (socket.role !== "Admin") return;
 		
 
 
