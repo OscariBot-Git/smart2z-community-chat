@@ -28,6 +28,9 @@ mongoose.connect(MONGO_URI)
       await trimByType(type, getLimitByType(type));
     }
    //await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
+   await Message.deleteMany({});
+   console.log("✅ chat deleted");
+   
  })
   .catch(err => console.error("❌ MongoDB error:", err));
 
