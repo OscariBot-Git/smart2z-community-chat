@@ -349,6 +349,7 @@ io.on('connection', (socket) => {
     const newversion = meta.value;
 
     const msg = {
+	  id: Date.now() + "_" + Math.random(),
       username: socket.username,
       type: "announcement",
       title,
@@ -384,6 +385,7 @@ socket.on('create news', async ({ title, content }) => {
     const newversion = meta.value;
 
     const msg = {
+	  id: Date.now() + "_" + Math.random(),
       username: socket.username,
       type: "news",
       title,
@@ -568,7 +570,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 		const username = socket.username;
 
-		const msg = await Message.findOne({ id: msgId }).select('reactions');
+		const msg = await Message.findOne({ id: msgId }).select('reactions').lean();
 		if (!msg) return;
 
 		if (!msg.reactions) msg.reactions = {};
