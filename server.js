@@ -29,6 +29,12 @@ mongoose.connect(MONGO_URI)
     }
    //await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
    await Message.deleteMany({});
+   await Meta.deleteMany({});
+   await Meta.insertMany([
+	  { key: "usersVersion", value: 1 },
+	  { key: "newsVersion", value: 1 },
+	  { key: "announcementVersion", value: 1 }
+	]);
 
  })
   .catch(err => console.error("❌ MongoDB error:", err));
