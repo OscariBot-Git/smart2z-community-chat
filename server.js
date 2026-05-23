@@ -89,7 +89,7 @@ const Meta = mongoose.model("Meta", MetaSchema);
 // =====================
 // ⚙️ CONFIG
 // =====================
-let onlineUsers = 0;
+const onlineUsers = new Set();
 let chatlimit = 300;
 let postlimit = 50;
 let newslimit = 50;
@@ -138,62 +138,68 @@ setInterval(async () => {
 
 
 
-
 // =====================
-// 🔌 SOCKET CONNECTION
+//  SOCKET CONNECTION
 // =====================
 io.on('connection', (socket) => {
 		
 
   // =====================
-  // 🚪 JOIN
+  //  JOIN
   // ===================== 
   socket.on('join', async (username, clientVersion, lastChatTimestamp) => {
   try {
     if (!username) return;
 
     socket.username = username;
-    onlineUsers++;
-	let user;
-	
-	if (clientVersion === 0) {
 
-	  const result = await User.findOneAndUpdate(
-		{ username },
-		{ $setOnInsert: { username, avatar: "", role: "member" } },
-		{
-		  upsert: true,
-		  new: true,
-		  rawResult: true
-		}
-	  );
+    // correct online tracking
+    onlineUsers.add(socket.id);
 
-	  user = result.value;
+    let user;
 
-	  // only increment if newly inserted
-	  if (!result.lastErrorObject.updatedExisting) {
+    // =====================
+    // USER SYNC / CREATE
+    // =====================
+    if (clientVersion === 0) {
 
-		const meta = await Meta.findOneAndUpdate(
-		  { key: "users_version" },
-		  { $inc: { value: 1 } },
-		  { new: true, upsert: true }
-		);
+      let isNewUser = false;
 
-		const newversion = meta.value;
-	  }
+      user = await User.findOne({ username });
 
-	} else {
+      if (!user) {
+        user = await User.create({
+          username,
+          avatar: "",
+          role: "member"
+        });
 
-	  user = await User.findOne(
-		{ username },
-		{ role: 1 }
-	  ).lean();
+        isNewUser = true;
+      }
 
-	}
+      user = user.toObject();
+
+      if (isNewUser) {
+        await Meta.findOneAndUpdate(
+          { key: "users_version" },
+          { $inc: { value: 1 } },
+          { new: true, upsert: true }
+        );
+      }
+
+    } else {
+
+      user = await User.findOne(
+        { username },
+        { username: 1, avatar: 1, role: 1 }
+      ).lean();
+    }
 
     socket.role = user?.role || "member";
-				 
-    // 🔥 IMPORTANT FIX: make lookup deterministic
+
+    // =====================
+    // META FETCH
+    // =====================
     const metaDocs = await Meta.find({
       key: { $in: ["users_version", "news_version", "announcement_version"] }
     }).lean();
@@ -202,56 +208,62 @@ io.on('connection', (socket) => {
       metaDocs.map(m => [m.key, m.value])
     );
 
-    const usersVersion = metaMap.users_version ?? 1;
-    const newsVersion = metaMap.news_version ?? 1;
-    const announcementVersion = metaMap.announcement_version ?? 1;
-	
+    const usersVersion = metaMap.users_version ?? 0;
+    const newsVersion = metaMap.news_version ?? 0;
+    const announcementVersion = metaMap.announcement_version ?? 0;
+
+    // =====================
+    // USERS SYNC
+    // =====================
     let users = [];
 
     if (clientVersion !== usersVersion) {
       users = await User.find({},{ username: 1, avatar: 1, role: 1 }).lean();
     }
 
-   // Fetch messages history
-		let query = {
-		  type: { $in: ["chat", "delete"] }
-		};
+    // =====================
+    // MESSAGE HISTORY
+    // =====================
+    let query = {
+      type: { $in: ["chat", "delete"] }
+    };
 
-		// 🔹 returning user → fetch only newer messages
-		if (lastChatTimestamp) {
+    if (lastChatTimestamp) {
+      query.timestamp = {
+        $gt: new Date(lastChatTimestamp)
+      };
+    }
 
-		  query.timestamp = {
-			$gt: new Date(lastChatTimestamp)
-		  };
-		}
+    const history = await Message.find(query)
+      .sort({ timestamp: 1 })
+      .limit(400)
+      .lean();
 
-		const history = await Message.find(query)
-		  .sort({ timestamp: 1 })
-		  .limit(400)
-		  .lean();
-
+    // =====================
+    // RESPONSE
+    // =====================
     socket.emit('initial data', {
       users,
       usersVersion,
-	  newsVersion,
-	  announcementVersion,
+      newsVersion,
+      announcementVersion,
       messages: history,
-      online: onlineUsers
+      online: onlineUsers.size
     });
 
-   const joinMsg = {
-        role: "system",
-        type: "connected",
-        content: socket.username + " joined the chat",
-        timestamp: new Date(),
-        online: onlineUsers
-      };
+    const joinMsg = {
+      role: "system",
+      type: "connected",
+      content: socket.username + " joined the chat",
+      timestamp: new Date(),
+      online: onlineUsers.size
+    };
 
-     // notify others users
-      socket.broadcast.emit('chat message', joinMsg);
-    } catch (err) {
-      console.error("JOIN ERROR:", err);
-    }
+    socket.broadcast.emit('chat message', joinMsg);
+
+  } catch (err) {
+    console.error("JOIN ERROR:", err);
+  }
 });
 
 
@@ -705,15 +717,15 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
   // =====================
   socket.on('disconnect', async () => {
     try {
-      onlineUsers = Math.max(onlineUsers - 1, 0);
+      onlineUsers.delete(socket.id);
       if (socket.username) {
         const leaveMsg = {
           type: "disconnected",
           content: socket.username + " left the chat",
           timestamp: new Date(),
-		  online: onlineUsers
+		  online: onlineUsers.size
         };
-
+		
         io.emit('chat message', leaveMsg);
       }
 
