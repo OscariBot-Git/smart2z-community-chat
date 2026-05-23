@@ -30,7 +30,7 @@ mongoose.connect(MONGO_URI)
       await trimByType(type, getLimitByType(type));
     }
    //await Message.syncIndexes(); // ✅ TURN ON ONCE WHEN SCHEMA CHANGE 
-   await Message.deleteMany({});
+  /*  await Message.deleteMany({});
    await User.deleteMany({});
    await Meta.deleteMany({});
    await Meta.insertMany([
@@ -38,7 +38,7 @@ mongoose.connect(MONGO_URI)
 	  { key: "newsVersion", value: 1 },
 	  { key: "announcementVersion", value: 1 }
 	]);
-  console.log("All data deleted.");
+  console.log("All data deleted."); */
  })
   .catch(err => console.error("❌ MongoDB error:", err));
 
