@@ -157,17 +157,39 @@ io.on('connection', (socket) => {
 	let user;
 	
 	if (clientVersion === 0) {
-      user = await User.findOneAndUpdate(
-        { username },
-        { $setOnInsert: { username, avatar: "", role: "member" } },
-        { upsert: true, new: true }
-      ).lean();
-    } else {
-      user = await User.findOne(
-        { username },
-        { role: 1 }
-      ).lean();
-    }
+
+	  const result = await User.findOneAndUpdate(
+		{ username },
+		{ $setOnInsert: { username, avatar: "", role: "member" } },
+		{
+		  upsert: true,
+		  new: true,
+		  rawResult: true
+		}
+	  );
+
+	  user = result.value;
+
+	  // only increment if newly inserted
+	  if (!result.lastErrorObject.updatedExisting) {
+
+		const meta = await Meta.findOneAndUpdate(
+		  { key: "users_version" },
+		  { $inc: { value: 1 } },
+		  { new: true, upsert: true }
+		);
+
+		const newversion = meta.value;
+	  }
+
+	} else {
+
+	  user = await User.findOne(
+		{ username },
+		{ role: 1 }
+	  ).lean();
+
+	}
 
     socket.role = user?.role || "member";
 				 
