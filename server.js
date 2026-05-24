@@ -81,7 +81,7 @@ const User = mongoose.model('User', userSchema);
 // =====================
 const MetaSchema = new mongoose.Schema({
   key: { type: String, unique: true },
-  value: { type: Number, default: 1 }
+  value: { type: Number, default: 0 }
 });
 const Meta = mongoose.model("Meta", MetaSchema);
 
@@ -156,70 +156,58 @@ io.on('connection', (socket) => {
     // correct online tracking
     onlineUsers.add(socket.id);
 
-    let user;
+	let user;
 
-    // =====================
-    // USER SYNC / CREATE
-    // =====================
-    if (clientVersion === 0) {
+	// =====================
+	// USER SYNC / CREATE
+	// =====================
+	user = await User.findOne({ username });
 
-      let isNewUser = false;
+	let isNewUser = false;
 
-      user = await User.findOne({ username });
+	if (!user) 
+	{user = await User.create({username,avatar: "",role: "member"});
+	  isNewUser = true;
+	}
 
-      if (!user) {
-        user = await User.create({
-          username,
-          avatar: "",
-          role: "member"
-        });
+	user = user.toObject();
 
-        isNewUser = true;
-      }
+	socket.role = user.role || "member";
 
-      user = user.toObject();
+	// =====================
+	// INCREMENT VERSION ONLY IF NEW USER
+	// =====================
+	if (isNewUser) {
+	  await Meta.findOneAndUpdate(
+		{ key: "users_version" },
+		{ $inc: { value: 1 } },
+		{ new: true, upsert: true }
+	  );
+	}
 
-      if (isNewUser) {
-        await Meta.findOneAndUpdate(
-          { key: "users_version" },
-          { $inc: { value: 1 } },
-          { new: true, upsert: true }
-        );
-      }
+	// =====================
+	// META FETCH
+	// =====================
+	const metaDocs = await Meta.find({
+	  key: { $in: ["users_version", "news_version", "announcement_version"] }
+	}).lean();
 
-    } else {
+	const metaMap = Object.fromEntries(
+	  metaDocs.map(m => [m.key, m.value])
+	);
 
-      user = await User.findOne(
-        { username },
-        { username: 1, avatar: 1, role: 1 }
-      ).lean();
-    }
+	const usersVersion = metaMap.users_version ?? 0;
+	const newsVersion = metaMap.news_version ?? 0;
+	const announcementVersion = metaMap.announcement_version ?? 0;
 
-    socket.role = user?.role || "member";
+	// =====================
+	// USERS SYNC (FULL CONTROLLED BY VERSION ONLY)
+	// =====================
+	let users = [];
 
-    // =====================
-    // META FETCH
-    // =====================
-    const metaDocs = await Meta.find({
-      key: { $in: ["users_version", "news_version", "announcement_version"] }
-    }).lean();
-
-    const metaMap = Object.fromEntries(
-      metaDocs.map(m => [m.key, m.value])
-    );
-
-    const usersVersion = metaMap.users_version ?? 0;
-    const newsVersion = metaMap.news_version ?? 0;
-    const announcementVersion = metaMap.announcement_version ?? 0;
-
-    // =====================
-    // USERS SYNC
-    // =====================
-    let users = [];
-
-    if (clientVersion !== usersVersion) {
-      users = await User.find({},{ username: 1, avatar: 1, role: 1 }).lean();
-    }
+	if (isNewUser || clientVersion !== usersVersion) {
+	  users = await User.find({},{ username: 1, avatar: 1, role: 1 }).lean();
+	}
 
     // =====================
     // MESSAGE HISTORY
