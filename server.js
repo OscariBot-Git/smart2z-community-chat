@@ -239,15 +239,31 @@ io.on('connection', (socket) => {
       online: onlineUsers.size
     });
 
-    const joinMsg = {
-      role: "system",
-      type: "connected",
-      content: socket.username + " joined the chat",
-      timestamp: new Date(),
-      online: onlineUsers.size
-    };
-
-    socket.broadcast.emit('chat message', joinMsg);
+	if (isNewUser ) {
+		const joinMsg = {
+		  role: "system",
+		  type: "connected",
+		  content: socket.username + " joined the chat",
+		  timestamp: new Date(),
+		  online: onlineUsers.size,
+		  newversion: usersVersion,
+		  newuser: socket.username,
+		  newuserrole: socket.role
+		};
+		
+		socket.broadcast.emit('join chat', joinMsg);
+	} else {
+		const joinMsg = {
+		  role: "system",
+		  type: "connected",
+		  content: socket.username + " joined the chat",
+		  timestamp: new Date(),
+		  online: onlineUsers.size		  
+		};
+		
+	    socket.broadcast.emit('join chat', joinMsg);	
+	}
+		
 
   } catch (err) {
     console.error("JOIN ERROR:", err);
@@ -714,7 +730,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  online: onlineUsers.size
         };
 		
-        io.emit('chat message', leaveMsg);
+        io.emit('join chat', leaveMsg);
       }
 
     } catch (err) {
