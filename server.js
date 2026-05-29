@@ -685,7 +685,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
   // =====================
   // 👍 REACTIONS
   // =====================
-	socket.on('react', async ({ msgId, reaction }) => { 
+	socket.on('react', async ({ msgId, reaction, exepage}) => { 
 	  try {
 		if (!socket.username) return;
 
