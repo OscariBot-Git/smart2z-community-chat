@@ -542,32 +542,66 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
   // =====================
   // ❌ DELETE MESSAGE
   // =====================
-  socket.on('delete message', async (msgId) => {
-    try {
-      const msg = await Message.findOne({ id: msgId });
-      if (!msg) return;
+  socket.on('delete message', async ({ msgId, exepage }) => {
+	  try {
 
-      if (msg.username === socket.username || socket.role === "Admin") {
+		const msg = await Message.findOne({ id: msgId });
+			if (!msg) return;
 
-        const newContent = socket.username + " deleted this message";
+			if (msg.username === socket.username || socket.role === "Admin") {
 
-         await Message.updateOne(
-			{ id: msgId },
-			{
-			  $set: {
-				content: newContent,
-				deleted: true,
-				type: "delete"
-			  }
-			}
+			  const newContent = socket.username + " deleted this message";
+
+			  await Message.updateOne(
+				{ id: msgId },
+				{
+				  $set: {
+					content: newContent,
+					deleted: true,
+					type: "delete"
+				  }
+				}
+			  );
+			   
+         let newversion = null;
+
+		if (exepage === "chats") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "users_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
 		  );
 
+			newversion = res.value;
 
+		} else if (exepage === "news") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "news_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+		  newversion = res.value;
+
+		} else if (exepage === "announcement") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "announcement_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+		  newversion = res.value;
+		}	  
+		
         io.emit('message deleted', {
           id: Date.now() + "_" + Math.random(),
           msgId,
           username: socket.username,
-          content: newContent
+          content: newContent,
+		  version: newversion
         });
       }
 
@@ -580,7 +614,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
   // =====================
   // ✏️ EDIT MESSAGE
   // =====================
-  socket.on('edit message', async ({ msgId, newContent }) => {
+  socket.on('edit message', async ({ msgId, newContent, exepage }) => {
     try {
       let cleaned = (newContent || "").trim();
       if (!cleaned) return;
@@ -598,9 +632,47 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
           edited: true
         }
       );
+	  
+		let newversion = null;
+
+		if (exepage === "chats") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "users_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+			newversion = res.value;
+
+		} else if (exepage === "news") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "news_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+		  newversion = res.value;
+
+		} else if (exepage === "announcement") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "announcement_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+		  newversion = res.value;
+		}	  
+	    
 
       io.emit('message edited', {
-        msgId, newContent: cleaned, timestamp: msg.timestamp, edited: true});
+        msgId, 
+		newContent: cleaned, 
+		timestamp: msg.timestamp, 
+		version: newversion,
+		edited: true});
 
     } catch (err) {
       console.error("EDIT ERROR:", err);
@@ -688,12 +760,47 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  }
 		);
 
+			let newversion = null;
+
+		if (exepage === "chats") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "users_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+			newversion = res.value;
+
+		} else if (exepage === "news") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "news_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+		  newversion = res.value;
+
+		} else if (exepage === "announcement") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "announcement_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+		  newversion = res.value;
+		}	  
+	    
+
 		// ✅ Emit updated reactions
 		const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
 
 		io.emit('message reaction', {
 		  msgId,
-		  reactions: updatedMsg.reactions || {}
+		  reactions: updatedMsg.reactions || {},
+		  version: newversion
 		});
 
 	  } catch (err) {
