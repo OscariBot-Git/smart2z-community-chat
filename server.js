@@ -565,7 +565,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 			   
          let newversion = null;
 
-		if (exepage === "chats") {
+		if (exepage === "chat") {
 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "users_version" },
@@ -575,9 +575,8 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 			newversion = res.value;
 
-		} else if (exepage === "news") {
-			
-		if (socket.role !== "Admin") return;	
+		} else if (exepage === "newsFeeds") {
+
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "news_version" },
 			{ $inc: { value: 1 } },
@@ -586,8 +585,8 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 		  newversion = res.value;
 
-		} else if (exepage === "announcement") {
-           if (socket.role !== "Admin") return;
+		} else if (exepage === "announceMents") {
+
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "announcement_version" },
 			{ $inc: { value: 1 } },
@@ -596,6 +595,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 		  newversion = res.value;
 		}	  
+	    
 		
         io.emit('message deleted', {
           id: Date.now() + "_" + Math.random(),
@@ -636,7 +636,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 	  
 		let newversion = null;
 
-		if (exepage === "chats") {
+		if (exepage === "chat") {
 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "users_version" },
@@ -646,8 +646,8 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 			newversion = res.value;
 
-		} else if (exepage === "news") {
-			if (socket.role !== "Admin") return;
+		} else if (exepage === "newsFeeds") {
+
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "news_version" },
 			{ $inc: { value: 1 } },
@@ -656,8 +656,8 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 		  newversion = res.value;
 
-		} else if (exepage === "announcement") {
-			if (socket.role !== "Admin") return;	
+		} else if (exepage === "announceMents") {
+
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "announcement_version" },
 			{ $inc: { value: 1 } },
@@ -666,6 +666,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 		  newversion = res.value;
 		}	  
+	    	  
 	    
 
       io.emit('message edited', {
@@ -763,7 +764,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 			let newversion = null;
 
-		if (exepage === "chats") {
+		if (exepage === "chat") {
 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "users_version" },
@@ -773,7 +774,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 			newversion = res.value;
 
-		} else if (exepage === "news") {
+		} else if (exepage === "newsFeeds") {
 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "news_version" },
@@ -783,7 +784,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 		  newversion = res.value;
 
-		} else if (exepage === "announcement") {
+		} else if (exepage === "announceMents") {
 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "announcement_version" },
