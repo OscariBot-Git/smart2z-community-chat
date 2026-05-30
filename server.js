@@ -204,28 +204,42 @@ io.on('connection', (socket) => {
 	// USERS SYNC (FULL CONTROLLED BY VERSION ONLY)
 	// =====================
 	let users = [];
+	let history = [];
 
-	if (isNewUser || clientVersion !== usersVersion) {
-	  users = await User.find({},{ username: 1, avatar: 1, role: 1 }).lean();
-	}
+		if (isNewUser || clientVersion !== usersVersion) {
 
-    // =====================
-    // MESSAGE HISTORY
-    // =====================
-    let query = {
-      type: { $in: ["chat", "delete"] }
-    };
+			  // Full user refresh
+			  users = await User.find(
+				{},
+				{ username: 1, avatar: 1, role: 1 }
+			  ).lean();
 
-    if (lastChatTimestamp) {
-      query.timestamp = {
-        $gt: new Date(lastChatTimestamp)
-      };
-    }
+			  // Full message refresh
+			  history = await Message.find({
+				type: { $in: ["chat", "delete"] }
+			  })
+				.sort({ timestamp: 1, _id: 1 })
+				.limit(400)
+				.lean();
 
-    const history = await Message.find(query)
-      .sort({ timestamp: 1 })
-      .limit(400)
-      .lean();
+		} else {
+
+			  // Incremental message sync
+			  let query = {
+				type: { $in: ["chat", "delete"] }
+			  };
+
+			  if (lastChatTimestamp) {
+				query.timestamp = {
+				  $gt: new Date(lastChatTimestamp)
+				};
+			  }
+
+			  history = await Message.find(query)
+				.sort({ timestamp: 1, _id: 1 })
+				.limit(400)
+				.lean();
+		}
 
     // =====================
     // RESPONSE
@@ -464,7 +478,14 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 		// 🔹 only query if client is outdated
 		if (clientVersion !== serverVersion) {
-
+		  // Client is outdated → full refresh
+		  messages = await Message.find({
+			type: "announcement"
+		  })
+			.sort({ timestamp: 1, _id: 1 })
+			.limit(400)
+			.lean();
+		} else {
 		  // base query
 		  const query = {
 			type: "announcement"
@@ -477,7 +498,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 			};
 		  }
 
-
+      // Client is current → only fetch new messages
       const newannouncement = await Message.find(query)
         .sort({ timestamp: 1 })
         .limit(400)
@@ -506,30 +527,36 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		const serverVersion = meta?.value || 1;
 
 		let messages = [];
-
-		// 🔹 only query if client is outdated
+		
 		if (clientVersion !== serverVersion) {
-
+		 // Client is outdated → full refresh
+		  messages = await Message.find({
+			type: "news"
+		  })
+			.sort({ timestamp: 1, _id: 1 })
+			.limit(400)
+			.lean();
+		} else {
+			
 		  // base query
 		  const query = {
 			type: "news"
 		  };
 
-		  // 🔹 fetch only newer news
+		  // fetch only newer news
 		  if (lastNewsTimestamp) {
 			query.timestamp = {
 			  $gt: new Date(lastNewsTimestamp)
 			};
 		  }
 
-		  // 🔹 get missing news
+		   // Client is current → only fetch new messages
 		  messages = await Message.find(query)
 			.sort({ timestamp: 1, _id: 1 })
 			.limit(400)
 			.lean();
 		}
 
-		// 🔹 always emit consistent structure
 		socket.emit('news update', {newversion: serverVersion,messages});
 
 	  } catch (err) {
@@ -564,7 +591,6 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 			  );
 			   
          let newversion = null;
-
 		if (exepage === "chat") {
 
 		  const res = await Meta.findOneAndUpdate(
@@ -576,7 +602,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 			newversion = res.value;
 
 		} else if (exepage === "newsFeeds") {
-
+		  if (socket.role !== "Admin") return;
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "news_version" },
 			{ $inc: { value: 1 } },
@@ -586,7 +612,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  newversion = res.value;
 
 		} else if (exepage === "announceMents") {
-
+			if (socket.role !== "Admin") return;
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "announcement_version" },
 			{ $inc: { value: 1 } },
@@ -698,6 +724,40 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 
 		const setUpdates = {};
 		const unsetUpdates = {};
+		
+		// Update version 
+		let newversion = null;
+		if (exepage === "chat") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "users_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+			newversion = res.value;
+
+		} else if (exepage === "newsFeeds") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "news_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+		  newversion = res.value;
+
+		} else if (exepage === "announceMents") {
+
+		  const res = await Meta.findOneAndUpdate(
+			{ key: "announcement_version" },
+			{ $inc: { value: 1 } },
+			{ new: true, upsert: true }
+		  );
+
+		  newversion = res.value;
+		}	  
+	
 
 		// ✅ 🔥 TOGGLE: if user already reacted with same emoji → remove it
 		if (msg.reactions[reaction]?.includes(username)) {
@@ -761,40 +821,6 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 			}
 		  }
 		);
-
-			let newversion = null;
-
-		if (exepage === "chat") {
-
-		  const res = await Meta.findOneAndUpdate(
-			{ key: "users_version" },
-			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
-		  );
-
-			newversion = res.value;
-
-		} else if (exepage === "newsFeeds") {
-
-		  const res = await Meta.findOneAndUpdate(
-			{ key: "news_version" },
-			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
-		  );
-
-		  newversion = res.value;
-
-		} else if (exepage === "announceMents") {
-
-		  const res = await Meta.findOneAndUpdate(
-			{ key: "announcement_version" },
-			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
-		  );
-
-		  newversion = res.value;
-		}	  
-	    
 
 		// ✅ Emit updated reactions
 		const updatedMsg = await Message.findOne({ id: msgId }).select('reactions');
