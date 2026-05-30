@@ -507,7 +507,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
       messages = Array.isArray(newannouncement) ? newannouncement : [];
     }
 
-    socket.emit('announcement update', {newversion: serverVersion,messages});
+    socket.emit('announcement refresh', {newversion: serverVersion,messages});
 
   } catch (err) {
     console.error("Get news error:", err);
@@ -557,7 +557,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 			.lean();
 		}
 
-		socket.emit('news update', {newversion: serverVersion,messages});
+		socket.emit('news refresh', {newversion: serverVersion,messages});
 
 	  } catch (err) {
 		console.error("Get news error:", err);
