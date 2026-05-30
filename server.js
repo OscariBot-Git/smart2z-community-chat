@@ -181,7 +181,7 @@ io.on('connection', (socket) => {
 	  await Meta.findOneAndUpdate(
 		{ key: "users_version" },
 		{ $inc: { value: 1 } },
-		{ new: true, upsert: true }
+		{returnDocument: "after",upsert: true}
 	  );
 	}
 
@@ -343,7 +343,7 @@ io.on('connection', (socket) => {
     const meta = await Meta.findOneAndUpdate(
       { key: "users_version" },
       { $inc: { value: 1 } },
-      { new: true, upsert: true }
+      {returnDocument: "after",upsert: true}
     );
 
     const newversion = meta.value;
@@ -375,7 +375,7 @@ io.on('connection', (socket) => {
 		const meta = await Meta.findOneAndUpdate(
 		  { key: "users_version" },
 		  { $inc: { value: 1 } },
-		  { new: true, upsert: true }
+		  {returnDocument: "after",upsert: true}
 		);
 
 		const newversion = meta.value;
@@ -404,7 +404,7 @@ io.on('connection', (socket) => {
     const meta = await Meta.findOneAndUpdate(
       { key: "announcement_version" },
       { $inc: { value: 1 } },
-      { new: true, upsert: true }
+      {returnDocument: "after",upsert: true}
     );
 
     const newversion = meta.value;
@@ -440,7 +440,7 @@ socket.on('create news', async ({ title, content }) => {
     const meta = await Meta.findOneAndUpdate(
       { key: "news_version" },
       { $inc: { value: 1 } },
-      { new: true, upsert: true }
+      {returnDocument: "after",upsert: true}
     );
 
     const newversion = meta.value;
@@ -596,7 +596,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "users_version" },
 			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
+			{returnDocument: "after",upsert: true}
 		  );
 
 			newversion = res.value;
@@ -606,7 +606,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "news_version" },
 			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
+			{returnDocument: "after",upsert: true}
 		  );
 
 		  newversion = res.value;
@@ -616,7 +616,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "announcement_version" },
 			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
+			{returnDocument: "after",upsert: true}
 		  );
 
 		  newversion = res.value;
@@ -667,7 +667,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "users_version" },
 			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
+			{returnDocument: "after",upsert: true}
 		  );
 
 			newversion = res.value;
@@ -677,7 +677,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "news_version" },
 			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
+			{returnDocument: "after",upsert: true}
 		  );
 
 		  newversion = res.value;
@@ -687,7 +687,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "announcement_version" },
 			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
+			{returnDocument: "after",upsert: true}
 		  );
 
 		  newversion = res.value;
@@ -752,7 +752,7 @@ socket.on('get announcement', async ({ lastAnnouncementTimestamp, clientVersion 
 		  const res = await Meta.findOneAndUpdate(
 			{ key: "announcement_version" },
 			{ $inc: { value: 1 } },
-			{ new: true, upsert: true }
+			{returnDocument: "after",upsert: true}
 		  );
 
 		  newversion = res.value;
