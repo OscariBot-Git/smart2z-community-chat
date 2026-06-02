@@ -651,40 +651,40 @@ socket.on("react", async ({ msgId, reaction }) => {
 
 
 
- // =====================
-// 🚪 DISCONNECT
-// =====================
-socket.on("disconnect", async () => {
-  try {
-	if (socket.username) {
+	 // =====================
+	// 🚪 DISCONNECT
+	// =====================
+	socket.on("disconnect", async () => {
+	  try {
+		if (socket.username) {
 
-	  // remove from online users
-	  onlineUsers.delete(socket.username);
+		  // remove from online users
+		  onlineUsers.delete(socket.username);
 
-	  const timeLeft = new Date();
+		  const timeLeft = new Date();
 
-	  // save last seen
-	  await User.updateOne(
-		{ username: socket.username },
-		{ $set: { lastSeen: timeLeft } }
-	  );
+		  // save last seen
+		  await User.updateOne(
+			{ username: socket.username },
+			{ $set: { lastSeen: timeLeft } }
+		  );
 
-	  const leaveMsg = {
-		username: socket.username,   
-		type: "disconnected",
-		content: socket.username + " left the chat",
-		timestamp: timeLeft,
-		online: onlineUsers.size
-	  };
-	  
-	  io.emit("join chat", leaveMsg);
-	}
+		  const leaveMsg = {
+			username: socket.username,   
+			type: "disconnected",
+			content: socket.username + " left the chat",
+			timestamp: timeLeft,
+			online: onlineUsers.size
+		  };
+		  
+		  io.emit("join chat", leaveMsg);
+		}
 
-  } catch (err) {
-	console.error("DISCONNECT ERROR:", err);
-  }
+	  } catch (err) {
+		console.error("DISCONNECT ERROR:", err);
+	  }
+	});
 });
-
 
 // =====================
 // 🌐 ROOT ROUTE
