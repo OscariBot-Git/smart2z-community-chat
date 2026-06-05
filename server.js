@@ -449,8 +449,8 @@ socket.on("chat message", async (data) => {
     };
 
     const saved = await Message.create(msg);
-
-    io.emit("message created", newversion, message: saved);
+	
+	io.emit("message created", {newversion,message: saved});
 
   } catch (err) {
     console.error("Create announcement error:", err);
@@ -482,7 +482,7 @@ socket.on("create news", async ({ title, content }) => {
 
     const saved = await Message.create(msg);
 
-    io.emit("message created", newversion, message: saved);
+	io.emit("message created", {newversion,message: saved});
 
   } catch (err) {
     console.error("Create news error:", err);
