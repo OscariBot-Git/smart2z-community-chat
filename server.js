@@ -434,7 +434,7 @@ socket.on("chat message", async (data) => {
   try {
     if (socket.role !== "Admin") return;
 
-    const version = await nextChatVersion();
+    const newversion = await nextChatVersion();
     const msg = {
       id: Date.now() + "_" + Math.random(),
       username: socket.username,
@@ -445,7 +445,7 @@ socket.on("chat message", async (data) => {
       edited: false,
       deleted: false,
       reactions: {},
-      version
+      newversion
     };
 
     const saved = await Message.create(msg);
@@ -466,7 +466,7 @@ socket.on("create news", async ({ title, content }) => {
   try {
     if (socket.role !== "Admin") return;
 
-    const version = await nextChatVersion();
+    const newversion = await nextChatVersion();
     const msg = {
       id: Date.now() + "_" + Math.random(),
       username: socket.username,
@@ -477,7 +477,7 @@ socket.on("create news", async ({ title, content }) => {
       edited: false,
       deleted: false,
       reactions: {},
-      version
+      newversion
     };
 
     const saved = await Message.create(msg);
@@ -684,6 +684,8 @@ socket.on("react", async ({ msgId, reaction }) => {
 		console.error("DISCONNECT ERROR:", err);
 	  }
 	});
+	
+	
 });
 
 // =====================
