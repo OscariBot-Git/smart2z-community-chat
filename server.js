@@ -152,7 +152,6 @@ const messageSchema = new mongoose.Schema({
   reactions: {type: Object,default: {}},
   version: {type: Number,index: true,required: true}
 });
-messageSchema.index({ version: 1 });
 const Message = mongoose.model("Message", messageSchema);
 
 
