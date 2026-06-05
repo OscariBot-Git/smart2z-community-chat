@@ -305,7 +305,7 @@ io.on("connection", (socket) => {
     // =====================
     const joinMsg = {
       id: Date.now() + "_" + Math.random(),
-      type: "system",
+      type: "connected",
       content: `${username} joined the chat`,
       timestamp: new Date(),
       online: onlineUsers.size
